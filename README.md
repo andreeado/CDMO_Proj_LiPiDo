@@ -1,5 +1,7 @@
 # CDMO_Proj_LiPiDo
 
+```
+
 CDMO_Proj_Dornescu_Ligabue_Picardi/
 │
 ├── report.pdf               # Main report or documentation file
@@ -15,3 +17,5 @@ CDMO_Proj_Dornescu_Ligabue_Picardi/
 │   ├── CP/                  # Source code for Constraint Programming
 │   ├── SAT/                 # Source code for SAT solving
 │   └── MIP/                 # Source code for Mixed Integer Programming
+
+```
