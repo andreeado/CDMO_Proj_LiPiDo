@@ -7,14 +7,14 @@
 
 include "alldifferent.mzn";
 
-int: n_teams;
-constraint n_teams mod 2 = 0;
-constraint n_teams >= 4;
+int: n;
+constraint n mod 2 = 0;
+constraint n >= 4;
 
-int: n_weeks = n_teams - 1;
-int: n_periods = n_teams div 2;
+int: n_weeks = n - 1;
+int: n_periods = n div 2;
 
-set of int: Team = 1..n_teams;
+set of int: Team = 1..n;
 set of int: Week = 1..n_weeks;
 set of int: Period = 1..n_periods;
 set of int: Slot = 1..2;  % 1 = home, 2 = away
@@ -75,7 +75,7 @@ solve :: seq_search([
 % Output
 output [
     "Home/Away Tournament Schedule:\n",
-    "(" ++ show(n_teams) ++ " teams, " ++ show(n_weeks) ++ " weeks, " ++ 
+    "(" ++ show(n) ++ " teams, " ++ show(n_weeks) ++ " weeks, " ++ 
     show(n_periods) ++ " periods per week)\n\n"
 ] ++
 [
