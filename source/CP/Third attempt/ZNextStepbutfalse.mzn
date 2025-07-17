@@ -1,5 +1,5 @@
 include "alldifferent.mzn";
-include "global_cardinality.mnz";
+include "global_cardinality.mzn";
 
 % Sports Tournament Scheduling Problem
 

@@ -32,9 +32,6 @@ array[Weeks, Periods] of var Teams: y;
 
 % Constraints
 
-% All matches are different
-constraint alldifferent([match_vars[w, p] | w in Weeks, p in Periods]);
-
 % Channeling variables through table constraints
 constraint forall(w in Weeks, p in Periods) (
   exists(i in Matches) (
@@ -43,6 +40,9 @@ constraint forall(w in Weeks, p in Periods) (
     match_vars[w, p] = table_match[i]
   )
 );
+
+% All matches are different
+constraint alldifferent(match_vars);
 
 % Each week, all teams are different
 constraint forall(w in Weeks) (
@@ -54,7 +54,7 @@ constraint forall(p in Periods) (
   forall(t in Teams) (
     let {
       var int: count = sum([bool2int(x[w, p] = t) + bool2int(y[w, p] = t) | w in Weeks])
-    } in count >= 1 /\ count <= 2
+    } in count = 1 + ( p == ((t+1) div 2))
   )
 );
 
