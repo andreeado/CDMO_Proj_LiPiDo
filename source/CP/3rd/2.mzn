@@ -8,16 +8,19 @@ include "global_cardinality.mzn";
 int: n;
 
 % Derived parameters
-int: nWeeks = n - 1;                    % Number of weeks in the tournament
-int: nPeriods = n div 2;                % Number of periods (games) per week
+int: nWeeks = n - 1;              % Number of weeks in the tournament
+int: nPeriods = n div 2;          % Number of periods (games) per week
 int: nMatches = (n - 1) * n div 2;      % Total number of matches
 
 % Precomputed match numbers for all team pairs
 % match_numbers[t1, t2] gives the match number for teams t1 and t2 (where t1 < t2)
+function int: match_number(int: t1, int: t2) = 
+  (t1 - 1) * n - (t1 * (t1 - 1)) div 2 + (t2 - t1);
+
 array[1..n, 1..n] of int: match_numbers = 
   array2d(1..n, 1..n, [
     if t1 < t2 then 
-      nMatches - ((n - t1 + 1) * (n - t1)) div 2 + (t2 - t1)
+      match_number(t1,t2)
     else 
       0  % Invalid pairing (t1 >= t2)
     endif
@@ -36,11 +39,7 @@ array[1..nWeeks, 1..nPeriods] of var Teams: x;
 % y[w,p] is the second team playing at week w, period p
 array[1..nWeeks, 1..nPeriods] of var Teams: y;
 
-% Constraints
-% 1. All matches must be different (each pair of teams plays exactly once)
-constraint alldifferent(m);
-
-% 2. Link the team variables (x,y) with match numbers (m) using precomputed array
+% 0. Link the team variables (x,y) with match numbers (m) using precomputed array
 % For each scheduled match, ensure the teams and match number are consistent
 constraint forall(w in 1..nWeeks, p in 1..nPeriods) (
   % Ensure x[w,p] < y[w,p] to maintain ordering
@@ -49,13 +48,17 @@ constraint forall(w in 1..nWeeks, p in 1..nPeriods) (
   m[w,p] = match_numbers[x[w,p], y[w,p]]
 );
 
-% 3. Each week, all teams must be different (every team plays exactly once per week)
+% Constraints
+% 1. All matches must be different (each pair of teams plays exactly once)
+constraint alldifferent(m);
+
+% 2. Each week, all teams must be different (every team plays exactly once per week)
 constraint forall(w in 1..nWeeks) (
   alldifferent([x[w,p] | p in 1..nPeriods] ++ [y[w,p] | p in 1..nPeriods])
 );
 
-% 5. Symmetry breaking constraints to reduce search space
-% 5a. In period k, teams 2k-1 and 2k play exactly once, all others play twice
+% 3. Symmetry breaking constraints to reduce search space
+% 3a. In period k, teams 2k-1 and 2k play exactly once, all others play twice
 array[1..nPeriods, Teams] of int: counts =
   array2d(1..nPeriods, Teams,
     [ if t = 2*p - 1 \/ t = 2*p then 1 else 2 endif | p in 1..nPeriods, t in Teams ]);
@@ -68,7 +71,7 @@ constraint forall(p in 1..nPeriods) (
   )
 );
 
-% 5b. Team 1 plays in periods following pattern: 1, 2, 2, 3, 3, 4, 4, ...
+% 3b. Team 1 plays in periods following pattern: 1, 2, 2, 3, 3, 4, 4, ...
 % Week 1: period 1, Week 2: period 2, Week 3: period 2, Week 4: period 3, etc.
 constraint forall(w in 1..nWeeks) (
     (x[w,(w+2) div 2] = 1) );

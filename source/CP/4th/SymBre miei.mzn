@@ -1,3 +1,6 @@
+% Sports Tournament Scheduling Problem
+% Each team plays against every other team exactly once
+% Games are scheduled across weeks and periods
 include "alldifferent.mzn";
 include "global_cardinality.mzn";
 
@@ -50,25 +53,26 @@ constraint forall(w in Weeks) (
 );
 
 % Each team plays at most two times in each period
-constraint forall(p in Periods) (
-  forall(t in Teams) (
-    let {
-      var int: count = sum([bool2int(x[w, p] = t) + bool2int(y[w, p] = t) | w in Weeks])
-    } in count = 1 + ( p == ((t+1) div 2))
+array[1..nPeriods, Teams] of int: counts =
+  array2d(1..nPeriods, Teams,
+    [ if t = 2*p - 1 \/ t = 2*p then 1 else 2 endif | p in 1..nPeriods, t in Teams ]);
+
+constraint forall(p in 1..nPeriods) (
+  global_cardinality(
+    [x[w,p] | w in 1..nWeeks] ++ [y[w,p] | w in 1..nWeeks], 
+    [t | t in Teams], 
+    [counts[p,t] | t in Teams]
   )
 );
 
-% Symmetry breaking: Match (1 vs t+1) occurs in week t
-constraint forall(w in Weeks) (
-  let { int: t = w + 1 } in
-  t <= n ->
-    count([match_vars[w, p] | p in Periods], match_number(1, t)) = 1
-);
+% 3b. Team 1 plays in periods following pattern: 1, 2, 2, 3, 3, 4, 4, ...
+% Week 1: period 1, Week 2: period 2, Week 3: period 2, Week 4: period 3, etc.
+constraint forall(w in 1..nWeeks) (
+    (x[w,(w+2) div 2] = 1) );
 
-% First week is fixed: 1 vs 2, 3 vs 4, 5 vs 6, ...
-constraint forall(p in Periods) (
-  match_vars[1, p] = match_number(2 * p - 1, 2 * p)
-);
+% 5c. Disambiguate the order of two successive columns
+constraint forall(p in 2..nPeriods) (
+    (y[2*p-2,p] < y[2*p-1,p]) );
 
 % Solve
 solve satisfy;
