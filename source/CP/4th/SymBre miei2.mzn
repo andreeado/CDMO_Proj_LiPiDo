@@ -53,9 +53,11 @@ constraint forall(w in Weeks) (
 );
 
 % Each team plays at most two times in each period
+
 array[1..nPeriods, Teams] of int: counts =
   array2d(1..nPeriods, Teams,
     [ if t = 2*p - 1 \/ t = 2*p then 1 else 2 endif | p in 1..nPeriods, t in Teams ]);
+    
 
 constraint forall(p in 1..nPeriods) (
   global_cardinality(
