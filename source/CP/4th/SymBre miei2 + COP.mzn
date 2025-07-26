@@ -34,10 +34,11 @@ array[Teams] of var 0..n-1: away_count;
 array[Teams] of var 0..n: imbalance;
 
 constraint forall(t in Teams) (
-  home_count[t] = sum([m in Matches] (
-    (if table_t1[m] = t then 1 - swap[m] else 0 endif) +
-    (if table_t2[m] = t then swap[m] else 0 endif)
-  )));
+  home_count[t] = sum(m in Matches) (
+    ((table_t1[m] == t) * (1 - swap[m])) +
+    ((table_t2[m] == t) * swap[m])
+  )
+);
 
 constraint forall(t in Teams) (
   away_count[t] = (n - 1 - home_count[t]
@@ -110,3 +111,27 @@ constraint forall(p in 2..nPeriods) (
 
 solve :: int_search(swap, input_order, indomain_min, complete) 
        minimize sum(t in Teams)(imbalance[t]);
+       
+output [
+  "=== Tournament Schedule (Home vs Away) ===\n"
+] ++
+[
+  "Week " ++ show(w) ++ ":\n" ++
+  concat([
+    "  Period " ++ show(p) ++ ": Team " ++ show(x[w, p]) ++
+    " (home) vs Team " ++ show(y[w, p]) ++ " (away) -- Match #" ++ show(match_vars[w, p]) ++
+    (if fix(swap[fix(match_vars[w, p])]) = 1 then " [swapped]\n" else "\n" endif)
+    | p in Periods
+  ])
+  | w in Weeks
+] ++
+["\n=== Per-Team Summary ===\n"] ++
+[
+  "Team " ++ show(t) ++ ": Home = " ++ show(home_count[t]) ++
+  ", Away = " ++ show(away_count[t]) ++
+  ", Imbalance = " ++ show(imbalance[t]) ++ "\n"
+  | t in Teams
+] ++
+[
+  "\nTotal imbalance = " ++ show(sum(t in Teams)(imbalance[t])) ++ "\n"
+];
