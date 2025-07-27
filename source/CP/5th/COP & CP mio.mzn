@@ -66,25 +66,25 @@ constraint forall(w in Weeks) (
   alldifferent([x[w, p] | p in Periods] ++ [y[w, p] | p in Periods])
 );
 
-% For each period and team, count the times the team appears in that period across all weeks
-constraint forall(p in Periods) (
-  forall(t in Teams) (
-    let {
-      var int: count = sum([bool2int(x[w, p] = t) + bool2int(y[w, p] = t) | w in Weeks])
-    } in count in 1..2 % Each team appears in each period 1 or 2 times
+% Each team plays at most two times in each period
+array[1..nPeriods, Teams] of int: counts =
+  array2d(1..nPeriods, Teams,
+    [ if t = 2*p - 1 \/ t = 2*p then 1 else 2 endif | p in 1..nPeriods, t in Teams ]);
+
+constraint forall(p in 1..nPeriods) (
+  global_cardinality(
+    [x[w,p] | w in 1..nWeeks] ++ [y[w,p] | w in 1..nWeeks], 
+    [t | t in Teams], 
+    [counts[p,t] | t in Teams]
   )
 );
 
-% For each week, ensure that match_number(1, t) appears exactly once for t = w + 1 <= n
-constraint forall(w in Weeks) (
-  let { int: t = w + 1 } in
-  t <= n ->
-    count([match_vars[w, p] | p in Periods], match_number(1, t)) = 1
-);
-
-% In the first week, assign matches in order: match_number(2p-1, 2p)
-constraint forall(p in Periods) (
-  match_vars[1, p] = match_number(2 * p - 1, 2 * p)
+% 3b. Team 1 plays in periods following pattern: 1, 2, 2, 3, 3, 4, 4, ...
+% Week 1: period 1, Week 2: period 2, Week 3: period 2, Week 4: period 3, etc.
+constraint forall(k in 1..n-1) (
+  exists(p in Periods) (
+    (x[k, p] = 1 /\ y[k, p] = k + 1)
+  )
 );
 
 % === Solve Phase (COP objective only) ===
@@ -97,7 +97,7 @@ solve :: seq_search([
   int_search(swap, input_order, indomain_random, complete),
 ]) minimize sum(imbalance);
 
-/* */
+
 
 % === Output ===
 

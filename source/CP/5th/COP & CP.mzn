@@ -47,21 +47,16 @@ function int: match_number(int: t1, int: t2) =
 set of int: Weeks = 1..nWeeks; % Set of week indices
 set of int: Periods = 1..nPeriods; % Set of period indices
 
-array[Matches] of int: table_match = [match_number(t1, t2) | t1 in Teams, t2 in Teams where t1 < t2]; % For each match, its unique number
-
 array[Weeks, Periods] of var Matches: match_vars; % For each week and period, which match is scheduled
 array[Weeks, Periods] of var Teams: x; % For each week and period, first team in the match
 array[Weeks, Periods] of var Teams: y; % For each week and period, second team in the match
 
-% Constraints
+% = Constraints =
 
+% Channeling Constraints Between implementations
 constraint forall(w in Weeks, p in Periods) (
-  % For each week and period, assign teams and match number consistently
-  exists(i in Matches) (
-    x[w, p] = table_t1[i] /\
-    y[w, p] = table_t2[i] /\
-    match_vars[w, p] = table_match[i]
-  )
+  x[w, p] = table_t1[match_vars[w, p]] /\
+  y[w, p] = table_t2[match_vars[w, p]]
 );
 
 % All scheduled matches must be different (no repeats)
@@ -81,33 +76,33 @@ constraint forall(p in Periods) (
   )
 );
 
-% For each week, ensure that match_number(1, t) appears exactly once for t = w + 1 <= n
+% = Symmetry breaking =
+
+% Well ordering of columns by fixing team 1 period choice
 constraint forall(w in Weeks) (
-  let { int: t = w + 1 } in
-  t <= n ->
-    count([match_vars[w, p] | p in Periods], match_number(1, t)) = 1
+  x[w,(w+2) div 2] = 1
 );
 
-% In the first week, assign matches in order: match_number(2p-1, 2p)
+% Well ordering of rows by fixing first week schedule
 constraint forall(p in Periods) (
   match_vars[1, p] = match_number(2 * p - 1, 2 * p)
 );
 
 % === Solve Phase (COP objective only) ===
 
-%solve minimize sum(t in Teams)(imbalance[t]);
+% solve minimize sum(imbalance);
 
 
 solve :: seq_search([
   int_search(match_vars, first_fail, indomain_random),
   int_search(swap, input_order, indomain_random, complete),
-]) minimize sum(t in Teams)(imbalance[t]);
+]) minimize sum(imbalance);
 
+/* */
 
 % === Output ===
+
 output [
-  "sol = [\n"
-] ++ [
   "  [" ++
   join(", ", [
     let {
@@ -118,4 +113,6 @@ output [
   | w in Weeks ]) ++ "]" ++
   if p != nPeriods then ",\n" else "\n" endif
 | p in Periods
-] ++ ["]\n"]; % Output the schedule as a list of home-away pairs for each period and week
+] ++ ["]\n"] ++ [
+ "Objective function: " ++ show(sum(t in Teams)(imbalance[t])) ++ "\n",
+]; % Output the schedule as a list of home-away pairs for each period and week
