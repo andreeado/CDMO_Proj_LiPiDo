@@ -97,7 +97,7 @@ output [
       var int: h = if swap[m] = 0 then x[w, p] else y[w, p] endif,
       var int: a = if swap[m] = 0 then y[w, p] else x[w, p] endif
     } in " [" ++ show(h) ++ ", " ++ show(a) ++ "]"
-  | p in Periods ]) ++ "]" ++
-  if w != nWeeks then ",\n" else "\n" endif
-| w in Weeks
+  | w in Weeks ]) ++ "]" ++
+  if p != nPeriods then ",\n" else "\n" endif
+| p in Periods
 ] ++ ["]\n"];
