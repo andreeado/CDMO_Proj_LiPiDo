@@ -98,7 +98,7 @@ solve :: seq_search([
   int_search(swap, input_order, indomain_random, complete),
 ]) minimize sum(imbalance);
 
-/* */
+
 
 % === Output ===
 
