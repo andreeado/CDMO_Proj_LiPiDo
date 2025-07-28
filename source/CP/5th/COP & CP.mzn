@@ -88,6 +88,12 @@ constraint forall(p in Periods) (
   match_vars[1, p] = match_number(2 * p - 1, 2 * p)
 );
 
+% Each team has exactly one "defective" period (plays only once in that period)
+constraint forall(t in Teams) (
+  sum(p in Periods) (
+    bool2int(sum(w in Weeks) (bool2int(x[w,p] = t) + bool2int(y[w,p] = t)) = 1)
+  ) = 1
+);
 % === Solve Phase (COP objective only) ===
 
 % solve minimize sum(imbalance);

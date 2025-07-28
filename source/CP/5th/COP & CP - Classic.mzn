@@ -51,8 +51,9 @@ array[Weeks, Periods] of var Matches: match_vars; % For each week and period, wh
 array[Weeks, Periods] of var Teams: x; % For each week and period, first team in the match
 array[Weeks, Periods] of var Teams: y; % For each week and period, second team in the match
 
-% Constraints
+% = Constraints =
 
+% Channeling Constraints Between implementations
 constraint forall(w in Weeks, p in Periods) (
   x[w, p] = table_t1[match_vars[w, p]] /\
   y[w, p] = table_t2[match_vars[w, p]]
@@ -75,14 +76,14 @@ constraint forall(p in Periods) (
   )
 );
 
-% For each week, ensure that match_number(1, t) appears exactly once for t = w + 1 <= n
+% = Symmetry breaking =
+
+% Well ordering of columns by fixing team 1 period choice
 constraint forall(w in Weeks) (
-  let { int: t = w + 1 } in
-  t <= n ->
-    count([match_vars[w, p] | p in Periods], match_number(1, t)) = 1
+  x[w,(w+2) div 2] = 1
 );
 
-% In the first week, assign matches in order: match_number(2p-1, 2p)
+% Well ordering of rows by fixing first week schedule
 constraint forall(p in Periods) (
   match_vars[1, p] = match_number(2 * p - 1, 2 * p)
 );
@@ -97,7 +98,7 @@ solve :: seq_search([
   int_search(swap, input_order, indomain_random, complete),
 ]) minimize sum(imbalance);
 
-/* */
+
 
 % === Output ===
 
