@@ -11,7 +11,7 @@ array[Matches] of int: table_t1 = [t1 | t1 in Teams, t2 in Teams where t1 < t2];
 array[Matches] of int: table_t2 = [t2 | t1 in Teams, t2 in Teams where t1 < t2]; % For each match, second team (away by default)
 
 % Decision variable: whether to swap team order in each match
-array[Matches] of var 0..1: swap; % For each match, 0 means no swap (t1 is home), 1 means swap (t2 is home)
+array[Matches] of var bool: swap; % For each match, 0 means no swap (t1 is home), 1 means swap (t2 is home)
 
 % Count how many times each team is home/away
 array[Teams] of var 0..n-1: home_count; % For each team, number of times they are home
@@ -39,9 +39,9 @@ include "global_cardinality.mzn";
 int: nWeeks = n - 1; % Number of weeks in the tournament
 int: nPeriods = n div 2; % Number of periods per week
 
-% Function to calculate match number from team indices
+% Function to calculate match ID from team indices
 % Only works for t1 < t2, second term "skips over" all matches s.t. t1 \geq t2
-function int: match_number(int: t1, int: t2) = 
+function int: match_ID(int: t1, int: t2) = 
   ((t1 - 1) * n + t2 ) - (t1 * (t1 + 1)) div 2;
 
 set of int: Weeks = 1..nWeeks; % Set of week indices
@@ -85,7 +85,7 @@ constraint forall(w in Weeks) (
 
 % Well ordering of rows by fixing first week schedule
 constraint forall(p in Periods) (
-  match_vars[1, p] = match_number(2 * p - 1, 2 * p)
+  match_vars[1, p] = match_ID(2 * p - 1, 2 * p)
 );
 
 % Each team has exactly one "defective" period (plays only once in that period)
@@ -112,7 +112,7 @@ output [
   "  [" ++
   join(", ", [
     let {
-      var int: m = match_vars[w, p], % Match number for week w, period p
+      var int: m = match_vars[w, p], % Match ID for week w, period p
       var int: h = if swap[m] = 0 then x[w, p] else y[w, p] endif, % Home team after swap
       var int: a = if swap[m] = 0 then y[w, p] else x[w, p] endif % Away team after swap
     } in " [" ++ show(h) ++ ", " ++ show(a) ++ "]"
