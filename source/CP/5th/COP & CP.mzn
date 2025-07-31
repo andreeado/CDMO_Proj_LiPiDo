@@ -76,6 +76,13 @@ constraint forall(p in Periods) (
   )
 );
 
+% Each team has exactly one "defective" period (plays only once in that period)
+constraint forall(t in Teams) (
+  sum(p in Periods) (
+    bool2int(sum(w in Weeks) (bool2int(x[p,w] = t) + bool2int(y[p,w] = t)) = 1)
+  ) = 1
+);
+
 % = Symmetry breaking =
 
 % Well ordering of columns by fixing team 1 period choice
@@ -88,12 +95,7 @@ constraint forall(p in Periods) (
   match_vars[p, 1] = match_ID(2 * p - 1, 2 * p)
 );
 
-% Each team has exactly one "defective" period (plays only once in that period)
-constraint forall(t in Teams) (
-  sum(p in Periods) (
-    bool2int(sum(w in Weeks)(bool2int(x[p,w] = t) + bool2int(y[p,w] = t)) = 1)
-  ) = 1
-);
+
 % === Solve Phase (COP objective only) ===
 
 % solve minimize sum(imbalance);
