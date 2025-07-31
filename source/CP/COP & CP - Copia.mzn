@@ -100,7 +100,7 @@ constraint forall(p in Periods) (
 
 solve :: seq_search([
   int_search(match_vars, first_fail, indomain_random),
-  restart_luby(n) :: bool_search(swap, input_order, indomain_random, complete),
+  bool_search(swap, input_order, indomain_random, complete),
 ]) minimize sum(imbalance);
 
 % === Output ===

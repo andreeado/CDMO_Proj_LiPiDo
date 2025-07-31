@@ -14,30 +14,33 @@ array[Matches] of int: table_t2 = [t2 | t1 in Teams, t2 in Teams where t1 < t2];
 array[Matches] of var bool: swap; % For each match, 0 means no swap (t1 is home), 1 means swap (t2 is home)
 
 % Count how many times each team is home/away
+array[Teams] of var 0..n-1: home_count; % For each team, number of times they are home
 array[Teams] of var 0..n-2: imbalance; % For each team, imbalance in home/away games
 
-  
-% For each team, calculate imbalance: abs(2 * home_count - (n - 1)) - 1
 constraint forall(t in Teams) (
-  let {
-    % Count how many times team t is home, based on swap direction
-    var int: home_count = sum(m in Matches) (
-      (table_t1[m] == t) * (1 - swap[m]) +
-      (table_t2[m] == t) * swap[m]
-    )
-  } in
-    % Compute the imbalance as deviation from ideal home/away split
-    imbalance[t] = abs(2 * home_count - (n - 1)) - 1
+  % For each team, count the number of times they are home
+  home_count[t] = sum(m in Matches) (
+    ((table_t1[m] == t) * (1 - swap[m])) + % t1 is home if swap[m] == 0
+    ((table_t2[m] == t) * swap[m])         % t2 is home if swap[m] == 1
+  )
+);
+
+constraint forall(t in Teams) (
+  % For each team, calculate imbalance: abs(2 * home_count - (n - 1)) - 1
+  % This measures deviation from perfect home/away balance
+  imbalance[t] = abs(2 * home_count[t] - (n - 1)) - 1
 );
 
 % === CP: Sports Tournament Scheduling Problem ===
 
 include "alldifferent.mzn";
+include "global_cardinality.mzn";
 
 int: nWeeks = n - 1; % Number of weeks in the tournament
 int: nPeriods = n div 2; % Number of periods per week
 
 % Function to calculate match ID from team indices
+% Only works for t1 < t2, second term "skips over" all matches s.t. t1 \geq t2
 function int: match_ID(int: t1, int: t2) = 
   ((t1 - 1) * n + t2 ) - (t1 * (t1 + 1)) div 2;
 
@@ -51,7 +54,7 @@ array[Periods, Weeks] of var Teams: y; % For each period and week, second team i
 % = Constraints =
 
 % Channeling Constraints Between implementations
-constraint forall(w in Weeks, p in Periods) (
+constraint forall(p in Periods, w in Weeks) (
   x[p, w] = table_t1[match_vars[p, w]] /\
   y[p, w] = table_t2[match_vars[p, w]]
 );
@@ -100,8 +103,9 @@ constraint forall(p in Periods) (
 
 solve :: seq_search([
   int_search(match_vars, first_fail, indomain_random),
-  restart_luby(n) :: bool_search(swap, input_order, indomain_random, complete),
+  int_search(swap, input_order, indomain_random, complete),
 ]) minimize sum(imbalance);
+
 
 % === Output ===
 
@@ -110,9 +114,9 @@ output [
   join(", ", [
     let {
       var int: m = match_vars[p, w], % Match ID for period p, week w
-      var int: home = if swap[m] = 0 then x[p, w] else y[p, w] endif, % Home team after swap
-      var int: away = if swap[m] = 0 then y[p, w] else x[p, w] endif % Away team after swap
-    } in " [" ++ show(home) ++ ", " ++ show(away) ++ "]"
+      var int: h = if swap[m] = 0 then x[p, w] else y[p, w] endif, % Home team after swap
+      var int: a = if swap[m] = 0 then y[p, w] else x[p, w] endif % Away team after swap
+    } in " [" ++ show(h) ++ ", " ++ show(a) ++ "]"
   | w in Weeks ]) ++ "]" ++
   if p != nPeriods then ",\n" else "\n" endif
 | p in Periods

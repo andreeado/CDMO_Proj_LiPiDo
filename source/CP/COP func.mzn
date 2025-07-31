@@ -14,25 +14,25 @@ array[Matches] of int: table_t2 = [t2 | t1 in Teams, t2 in Teams where t1 < t2];
 array[Matches] of var 0..1: swap;
 
 % Count how many times each team is home/away
-array[Teams] of var 0..n-1: home_count;
-array[Teams] of var 0..n-1: away_count;
-array[Teams] of var 0..n: imbalance;
+array[Teams] of var 0..n-2: imbalance; % For each team, imbalance in home/away games
 
-
+  
+% For each team, calculate imbalance: abs(2 * home_count - (n - 1)) - 1
 constraint forall(t in Teams) (
-  home_count[t] = sum(m in Matches) (
-    ((table_t1[m] == t) * (1 - swap[m])) +
-    ((table_t2[m] == t) * swap[m])
-  )
+  let {
+    % Count how many times team t is home, based on swap direction
+    var int: home_count = sum(m in Matches) (
+      (table_t1[m] == t) * (1 - swap[m]) +
+      (table_t2[m] == t) * swap[m]
+    )
+  } in
+    % Compute the imbalance as deviation from ideal home/away split
+    imbalance[t] = abs(2 * home_count - (n - 1)) - 1
 );
 
-constraint forall(t in Teams) (
-  imbalance[t] = abs(2 * home_count[t] - (n - 1)) - 1
-);
-
-solve :: int_search(swap, input_order, indomain_min, complete) 
-       minimize sum(t in Teams)(imbalance[t]);
+solve :: int_search(swap, input_order, indomain_random, complete) 
+       minimize sum(imbalance);
 
 output [
-  "swap=", show(swap), " obj=", show(sum(t in Teams)(imbalance[t]))
+  "swap=", show(swap), " obj=", show(sum(imbalance))
 ];
