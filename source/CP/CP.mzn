@@ -86,8 +86,8 @@ solve :: int_search(match_vars, first_fail, indomain_random) satisfy;
 
 % === Output ===
 
-output [
-  "  [" ++
+output ["[\n"] ++ [
+  "[\n[" ++
   join(", ",
  [" [" ++ show(x[p, w]) ++ ", " ++ show(y[p, w]) ++ "]"
   | w in Weeks ]) ++ "]" ++

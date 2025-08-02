@@ -79,7 +79,7 @@ solve :: seq_search([
   int_search(match_vars, first_fail, indomain_random)
 ]) minimize sum(imbalance);
 
-output [
+output ["[\n"] ++ [
   "  [" ++
   join(", ", [
     " [" ++ show(x[p, w]) ++ ", " ++ show(y[p, w]) ++ "]"

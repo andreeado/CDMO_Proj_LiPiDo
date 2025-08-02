@@ -51,7 +51,7 @@ array[Periods, Weeks] of var Teams: y; % For each period and week, second team i
 % = Constraints =
 
 % Channeling Constraints Between implementations
-constraint forall(p in Periods, w in Weeks) (
+constraint forall(w in Weeks, p in Periods) (
   x[p, w] = table_t1[match_vars[p, w]] /\
   y[p, w] = table_t2[match_vars[p, w]]
 );
@@ -80,19 +80,32 @@ constraint forall(t in Teams) (
   ) = 1
 );
 
+% = Symmetry breaking =
+
+% Well ordering of columns by fixing team 1 period choice
+constraint forall(w in Weeks) (
+  x[(w+2) div 2, w] = 1
+);
+
+% Well ordering of rows by fixing first week schedule
+constraint forall(p in Periods) (
+  match_vars[p, 1] = match_ID(2 * p - 1, 2 * p)
+);
+
+
 % === Solve Phase (COP objective only) ===
 
 % solve minimize sum(imbalance);
 
 
 solve :: seq_search([
-  int_search(match_vars, first_fail, indomain_random),
-  bool_search(swap, input_order, indomain_random, complete),
+    int_search(match_vars, first_fail, indomain_random),
+    bool_search(swap, input_order, indomain_random, complete)
 ]) minimize sum(imbalance);
 
 % === Output ===
 
-output [
+output ["[\n"] ++ [
   "  [" ++
   join(", ", [
     let {

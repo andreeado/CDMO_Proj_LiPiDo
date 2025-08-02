@@ -99,13 +99,13 @@ DATA_FILE = "C:\\Users\\xPica\\Documents\\CDMO_Proj_LiPiDo\\source\\CP\\data.dzn
 SOLVER = "gecode"
 
 # Random seeds to test
-SEEDS = range(1, 16)  # Seeds from 1 to 15
+SEEDS = [2,5,7,9,15]  # Seeds from 1 to 15
 
 # Time limit in milliseconds
-TIME_LIMIT_MS = 60000  # 1 minute
+TIME_LIMIT_MS = 300000  # 5 minutes
 
 # Output Excel file name
-OUTPUT_FILE = "model_comparison.xlsx"
+OUTPUT_FILE = "model_comparison_BB.xlsx"
 
 # ============================================================================
 # END CONFIGURATION SECTION
