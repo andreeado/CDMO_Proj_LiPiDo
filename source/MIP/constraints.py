@@ -32,7 +32,7 @@ def one_game_per_period_rule(model, w, p):
     """
     return sum(model.x[i,j,w,p] 
                for i in model.Teams
-               for j in model.Teams if i != j) == 2
+               for j in model.Teams if i != j) == 1
 
 def max_twice_per_period_rule(model, i, p):
     """
@@ -161,7 +161,5 @@ def add_constraints(model,
     model.no_self_play = pyo.Constraint(model.Teams, model.Weeks, model.Periods, rule=no_self_play_rule)
     if symmetry_breaking:
         add_adaptive_symmetry_breaking(model, n_teams=len(model.Teams), level=symmetry_level)
-
-    logger.info(f"Added constraints: {len(model.component_objects(pyo.Constraint))} constraint blocks")
 
 
