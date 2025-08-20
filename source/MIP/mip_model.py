@@ -1,7 +1,7 @@
 import pyomo.environ as pyo
 from pyomo.opt import SolverStatus, TerminationCondition
 import logging
-from typing import Dict, List, Tuple, Optional, Any
+from typing import Dict, List, Optional, Any
 import time
 from constraints import add_constraints
 
@@ -31,13 +31,7 @@ class STSModel():
         
         logger.info(f"Initialized STS model: {n_teams} teams, {self.n_weeks} weeks, {self.n_periods} periods")
     
-    def _extract_schedule(self) -> List[List[List[int, int]]]:
-        """
-        Extract the schedule from the solved model
-        
-        Returns:
-            3D list: schedule[week][period] = [(home_team, away_team), ...]
-        """
+    def _extract_schedule(self) -> List[List[List[int]]]:
         if self.model is None:
             raise ValueError("Model not built")
         
@@ -48,11 +42,8 @@ class STSModel():
                for i in self.model.Teams:
                    for j in self.model.Teams:
                        if i != j and pyo.value(self.model.x[i, j, week, period]) > 0.5:
-                           period_matches.append((i+1, j+1))
+                           period_matches.append([i+1, j+1])
            schedule.append(period_matches)
-        print(f"Number of periods: {len(schedule)}\n Number of weeks: {[len(s) for s in schedule]}")
-        print(f"Number of periods: {self.n_periods}\n Number of weeks: {self.n_weeks}")
-
         return schedule
 
     def build_model(self, 
@@ -196,7 +187,7 @@ class STSModel():
         Display the tournament schedule in a readable format
         
         Args:
-            format_type: 'table', 'compact', or 'detailed'
+            format_type: 'table'
         """
         if self.solution is None or not self.solution['feasible']:
             print("No feasible solution to display")
@@ -206,193 +197,52 @@ class STSModel():
         
         if format_type == 'table':
             self._display_table_format(schedule)
-        elif format_type == 'compact':
-            self._display_compact_format(schedule)
-        elif format_type == 'detailed':
-            self._display_detailed_format(schedule)
         else:
-            raise ValueError("format_type must be 'table', 'compact', or 'detailed'")
+            raise ValueError("format_type must be 'table' or 'compact'")
     
     def _display_table_format(self, schedule):
         """Display schedule as a table with weeks as rows and periods as columns"""
-        print(f"\n{'='*60}")
         print(f"TOURNAMENT SCHEDULE - {self.n_teams} Teams")
-        print(f"{'='*60}")
         
         # Header
-        header = f"{'Week':<6}"
-        for p in range(self.n_periods):
-            header += f"{'Period ' + str(p):<15}"
+        header = f"{'Period':<12}"
+        for p in range(self.n_weeks):
+            p+=1
+            header += f"{'Week' + str(p):<15}"
+        print("-" * len(header))
         print(header)
         print("-" * len(header))
         
         # Schedule rows
-        for week in range(self.n_weeks):
-            row = f"{week:<6}"
-            for period in range(self.n_periods):
-                matches = schedule[week][period]
+        for period in range(self.n_periods):
+            row = f"{period+1:<12}"
+            for week in range(self.n_weeks):
+                matches = schedule[period][week]
                 if matches:
                     # Should be exactly one match per period
-                    match_str = f"{matches[0][0]} vs {matches[0][1]}"
+                    match_str = f"{matches[0]} vs {matches[1]}"
                 else:
                     match_str = "---"
                 row += f"{match_str:<15}"
             print(row)
         
         print(f"\n{'='*60}")
-        self._display_summary()
     
-    def _display_compact_format(self, schedule):
-        """Display schedule in a compact week-by-week format"""
-        print(f"\nTOURNAMENT SCHEDULE - {self.n_teams} Teams")
-        print("=" * 50)
-        
-        for week in range(self.n_weeks):
-            matches_in_week = []
-            for period in range(self.n_periods):
-                matches = schedule[week][period]
-                if matches:
-                    matches_in_week.extend(matches)
-            
-            print(f"Week {week}: ", end="")
-            match_strs = [f"({match[0]} vs {match[1]})" for match in matches_in_week]
-            print(" | ".join(match_strs))
-        
-        print("=" * 50)
-        self._display_summary()
     
-    def _display_detailed_format(self, schedule):
-        """Display schedule with detailed period information"""
-        print(f"\nDETAILED TOURNAMENT SCHEDULE - {self.n_teams} Teams")
-        print("=" * 60)
-        
-        for week in range(self.n_weeks):
-            print(f"\nWEEK {week}:")
-            print("-" * 20)
-            
-            week_has_matches = False
-            for period in range(self.n_periods):
-                matches = schedule[week][period]
-                if matches:
-                    week_has_matches = True
-                    print(f"  Period {period}: Team {matches[0][0]} (home) vs Team {matches[0][1]} (away)")
-                else:
-                    print(f"  Period {period}: No match")
-            
-            if not week_has_matches:
-                print("  No matches this week!")
-        
-        print("=" * 60)
-        self._display_summary()
-    
-    def _display_summary(self):
-        """Display summary statistics"""
-        if not self.solution['feasible']:
-            return
-            
-        schedule = self.solution['schedule']
-        
-        # Count total matches
-        total_matches = 0
-        period_usage = [0] * self.n_periods
-        
-        for week in range(self.n_weeks):
-            for period in range(self.n_periods):
-                matches = schedule[week][period]
-                total_matches += len(matches)
-                if matches:
-                    period_usage[period] += 1
-        
-        expected_matches = (self.n_teams * (self.n_teams - 1)) // 2
-        
-        print(f"\nSUMMARY:")
-        print(f"  Total matches scheduled: {total_matches}")
-        print(f"  Expected matches: {expected_matches}")
-        print(f"  Solve time: {self.solution['solve_time']:.2f} seconds")
-        print(f"  Status: {self.solution['termination_condition']}")
-        
-        print(f"\nPERIOD USAGE:")
-        for p in range(self.n_periods):
-            print(f"  Period {p}: {period_usage[p]} weeks used")
-    
-    def validate_schedule(self) -> bool:
-        """
-        Validate that the schedule satisfies all constraints
-        
-        Returns:
-            True if schedule is valid, False otherwise
-        """
-        if not self.solution or not self.solution['feasible']:
-            print("No feasible solution to validate")
-            return False
-        
-        schedule = self.solution['schedule']
-        errors = []
-        
-        # Check 1: Each pair plays exactly once
-        pairs_played = set()
-        for week in range(self.n_weeks):
-            for period in range(self.n_periods):
-                for home, away in schedule[week][period]:
-                    pair = tuple(sorted([home, away]))
-                    if pair in pairs_played:
-                        errors.append(f"Teams {pair[0]} and {pair[1]} play more than once")
-                    pairs_played.add(pair)
-        
-        expected_pairs = {tuple(sorted([i, j])) for i in range(self.n_teams) 
-                         for j in range(i+1, self.n_teams)}
-        missing_pairs = expected_pairs - pairs_played
-        if missing_pairs:
-            errors.append(f"Missing matchups: {missing_pairs}")
-        
-        # Check 2: Each team plays once per week
-        for week in range(self.n_weeks):
-            teams_this_week = set()
-            for period in range(self.n_periods):
-                for home, away in schedule[week][period]:
-                    if home in teams_this_week:
-                        errors.append(f"Team {home} plays multiple times in week {week}")
-                    if away in teams_this_week:
-                        errors.append(f"Team {away} plays multiple times in week {week}")
-                    teams_this_week.add(home)
-                    teams_this_week.add(away)
-        
-        # Check 3: At most twice per period constraint
-        period_counts = {team: [0] * self.n_periods for team in range(self.n_teams)}
-        for week in range(self.n_weeks):
-            for period in range(self.n_periods):
-                for home, away in schedule[week][period]:
-                    period_counts[home][period] += 1
-                    period_counts[away][period] += 1
-        
-        for team in range(self.n_teams):
-            for period in range(self.n_periods):
-                if period_counts[team][period] > 2:
-                    errors.append(f"Team {team} plays {period_counts[team][period]} times in period {period}")
-        
-        if errors:
-            print("VALIDATION ERRORS:")
-            for error in errors:
-                print(f"  - {error}")
-            return False
-        else:
-            print("✓ Schedule is valid!")
-            return True
 
 if __name__ == "__main__":
     # Set up logging
     logging.basicConfig(level=logging.INFO, 
                        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     
-    # Create and solve a small instance
-    n_teams = 6
+    n_teams = 14
     
     # Build model
     sts = STSModel(n_teams)
-    sts.build_model(symmetry_breaking=False, symmetry_level='auto')
+    sts.build_model(symmetry_breaking=True, symmetry_level='auto')
 
     # Solve model
-    solution = sts.solve(solver_name='cbc', time_limit=60)
+    solution = sts.solve(solver_name='cbc', time_limit=300)
 
     # Save solution
     sts.save_solution("solution.json")
@@ -403,20 +253,7 @@ if __name__ == "__main__":
         print("TABLE FORMAT:")
         sts.display_schedule(format_type='table')
         
-        print("\n" + "="*80)
-        print("COMPACT FORMAT:")
-        sts.display_schedule(format_type='compact')
-        
-        # Validate the solution
-        print("\n" + "="*80)
-        print("VALIDATION:")
-        sts.validate_schedule()
-        
         # Save solution
         sts.save_solution("solution.json")
     else:
         print(f"No feasible solution found. Status: {solution['termination_condition']}")
-        print("Try with:")
-        print("1. Longer time limit")
-        print("2. Different symmetry breaking level")
-        print("3. Different solver (if available)")

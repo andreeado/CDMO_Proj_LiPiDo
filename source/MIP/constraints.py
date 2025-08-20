@@ -124,26 +124,7 @@ def add_adaptive_symmetry_breaking(model, n_teams: int, level: str = 'auto'):
     elif level == 'aggressive':
         # Fix entire first week and team ordering
         fix_first_week(model, n_teams)
-        fix_team_order(model)
-
-""" def add_adaptive_symmetry_breaking(model, n_teams):
-    if n_teams <= 4:
-        # Small tournament: fix one game
-        model.symmetry1 = pyo.Constraint(expr=model.x[0, 1, 0, 0] == 1)
-        
-    elif n_teams <= 8:
-        # Medium tournament: fix first two games
-        model.symmetry1 = pyo.Constraint(expr=model.x[0, 1, 0, 0] == 1)
-        model.symmetry2 = pyo.Constraint(expr=model.x[2, 3, 0, 1] == 1)
-        
-    else:
-        # Large tournament: fix entire first week
-        fix_complete_first_week(model, n_teams)
-        
-        # Additional: fix team 0's position in week 1
-        model.symmetry_week1 = pyo.Constraint(
-            expr=sum(model.x[0, j, 1, 0] for j in model.Teams if j != 0) == 1
-        ) """
+        fix_team_order(model, n_teams)
 
         
 # add constraints to the model

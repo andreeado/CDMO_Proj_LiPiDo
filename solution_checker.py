@@ -54,7 +54,6 @@ def fatal_errors(solution, obj, time, optimal, teams):
 def check_solution(solution: list, obj, time, optimal):
 
     periods, solution_matches, teams = get_elements(solution)
-    print(len(solution))
     errors = fatal_errors(solution, obj, time, optimal, teams)
 
     if len(errors) == 0 and len(solution) > 0:
