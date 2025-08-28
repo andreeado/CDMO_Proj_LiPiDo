@@ -1,0 +1,32 @@
+services:
+  solve-mip:
+    build: .
+    image: cdmo_mip
+    container_name: solver_mip
+    volumes:
+      - ./res:/app/res
+    entrypoint: ["./run.sh", "MIP"]
+    
+  solve-cp:
+    build: .
+    image: cdmo_cp
+    container_name: solver_cp
+    volumes:
+      - ./res:/app/res
+    command: ["./run.sh", "CP"]
+
+  solve-SAT:
+    build: .
+    image: cdmo_sat
+    container_name: solver_sat
+    volumes:
+      - ./res:/app/res
+    command: ["./run.sh", "SAT"]
+    
+  solve-all:
+    build: .
+    image: cdmo_all
+    container_name: solver_all
+    volumes:
+      - ./res:/app/res
+    command: ["./run.sh", "all"]

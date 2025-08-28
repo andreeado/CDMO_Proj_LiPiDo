@@ -1,0 +1,28 @@
+FROM python:3.11-slim
+WORKDIR /app
+
+# Install system dependencies and CBC solver
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    wget \
+    unzip \
+    build-essential \
+    coinor-cbc \
+    && rm -rf /var/lib/apt/lists/*
+
+# Upgrade pip and install Python packages
+RUN pip install --no-cache-dir \
+    pyomo==6.9.2 \
+    ply==3.11 \
+    wheel==0.45.1 \
+    setuptools==78.1.1
+
+COPY res/ /app/res/
+COPY source/ /app/source/
+#COPY solution_checker.py /app/
+COPY run.sh /app/
+RUN chmod +x /app/run.sh
+ENV PYTHONPATH="/app"
+
+RUN mkdir -p /app/res/MIP /app/res/CP /app/res/SAT
+
+CMD ["./run.sh", "all"]

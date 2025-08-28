@@ -87,7 +87,16 @@ def fix_team_order(model, n_teams):
                 )
             )
 
+## CONSTRAINTS FOR OPTIMIZATION
+def balance(model,i):
+    """
+    Balance constraint for team i.
+    """
+    home_games = sum(model.x[i,j,w,p] for j in model.Teams for w in model.Weeks for p in model.Periods)
+    away_games = sum(model.x[j,i,w,p] for j in model.Teams for w in model.Weeks for p in model.Periods)
+    return (home_games - away_games) == (model.d_pos[i] - model.d_neg[i])
 
+    
 def add_adaptive_symmetry_breaking(model, n_teams: int, level: str = 'auto'):
     """
     Add symmetry breaking constraints based on problem size and level.
@@ -140,6 +149,10 @@ def add_constraints(model,
     model.one_game_per_period = pyo.Constraint(model.Weeks, model.Periods, rule=one_game_per_period_rule)
     model.max_twice_per_period = pyo.Constraint(model.Teams, model.Periods, rule=max_twice_per_period_rule)
     model.no_self_play = pyo.Constraint(model.Teams, model.Weeks, model.Periods, rule=no_self_play_rule)
+
+    # optimization
+    model.balance = pyo.Constraint(model.Teams, rule=balance)
+    
     if symmetry_breaking:
         add_adaptive_symmetry_breaking(model, n_teams=len(model.Teams), level=symmetry_level)
 

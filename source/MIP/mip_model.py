@@ -1,9 +1,12 @@
+from argparse import ArgumentParser
 import pyomo.environ as pyo
 from pyomo.opt import SolverStatus, TerminationCondition
 import logging
 from typing import Dict, List, Optional, Any
 import time
 from constraints import add_constraints
+import os
+import json
 
 logger = logging.getLogger(__name__)
 
@@ -63,10 +66,33 @@ class STSModel():
         self.model.x = pyo.Var(self.model.Teams, self.model.Teams, self.model.Weeks, self.model.Periods, 
                          domain=pyo.Binary)
         
+        # auxiliary variables for optimization
+        self.model.d_pos = pyo.Var(self.model.Teams, domain=pyo.NonNegativeIntegers)
+        self.model.d_neg = pyo.Var(self.model.Teams, domain=pyo.NonNegativeIntegers)
+
         # add constraints
         add_constraints(self.model, symmetry_breaking=symmetry_breaking, symmetry_level=symmetry_level)
+        # Lower bound = n
+        lb = self.n_teams
+
+        # Upper bound = n * (n - 1)
+        ub = self.n_teams * (self.n_teams - 1)
+
+        # Objective: sum of deviations
+        expr = sum(self.model.d_pos[i] + self.model.d_neg[i] for i in self.model.Teams)
+        self.model.obj = pyo.Objective(expr=expr, sense=pyo.minimize)
+
+        # Add an explicit constraint for the bounds
+        self.model.obj_lower_bound = pyo.Constraint(expr=expr >= lb)
+        self.model.obj_upper_bound = pyo.Constraint(expr=expr <= ub)
+
+
         # Objective: Feasibility problem (minimize 0)
-        self.model.obj = pyo.Objective(expr=0, sense=pyo.minimize)
+        # self.model.obj = pyo.Objective(expr=0, sense=pyo.minimize)
+
+        # Objetive: Optimization problem (balances home-away matches)
+        """ self.model.obj = pyo.Objective(expr=sum(self.model.d_pos[i]+ self.model.d_neg[i] 
+                                                for i in self.model.Teams), sense=pyo.minimize) """
         return self.model
     
     def solve(self, solver_name: str = 'cbc', 
@@ -95,7 +121,6 @@ class STSModel():
         # Create solver
         solver = pyo.SolverFactory(solver_name)
         
-        # Set common options
         if solver_options is None:
             solver_options = {}
         
@@ -162,32 +187,41 @@ class STSModel():
     
 
     def save_solution(self, filepath: str) -> None:
-        """Save the solution to a JSON file in the format expected by the checker"""
         if self.solution is None:
             raise ValueError("No solution to save")
         
-        import json
-        
         # Format for solution checker
+        solver_name = self.solution['solver']
         output = {
-            "MIP": {
-                "sol": self.solution['schedule'] if self.solution['feasible'] else [],
+            solver_name: {
                 "time": self.solution['solve_time'],
-                "optimal": self.solution['termination_condition'] == 'optimal'
+                "optimal": self.solution['termination_condition'] == 'optimal',
+                "obj": self.solution['objective_value'] if 'objective_value' in self.solution else None,
+                "sol": self.solution['schedule'] if self.solution['feasible'] else []
             }
         }
+        # Load existing data if file exists
+        
+        if os.path.exists(filepath):
+            with open(filepath, "r") as f:
+                try:
+                    data = json.load(f)
+                except json.JSONDecodeError:
+                    data = {}
+        else:
+            data = {}
+
+        data.update(output)
         
         with open(filepath, 'w') as f:
-            json.dump(output, f, indent=2)
+            json.dump(data, f, indent=2)
         
         logger.info(f"Solution saved to {filepath}")
 
-    def display_schedule(self, format_type: str = 'table') -> None:
+    def display_schedule(self) -> None:
         """
-        Display the tournament schedule in a readable format
-        
-        Args:
-            format_type: 'table'
+        Display schedule as a table with weeks as rows and periods as columns
+
         """
         if self.solution is None or not self.solution['feasible']:
             print("No feasible solution to display")
@@ -195,13 +229,6 @@ class STSModel():
         
         schedule = self.solution['schedule']
         
-        if format_type == 'table':
-            self._display_table_format(schedule)
-        else:
-            raise ValueError("format_type must be 'table' or 'compact'")
-    
-    def _display_table_format(self, schedule):
-        """Display schedule as a table with weeks as rows and periods as columns"""
         print(f"TOURNAMENT SCHEDULE - {self.n_teams} Teams")
         
         # Header
@@ -228,32 +255,47 @@ class STSModel():
         
         print(f"\n{'='*60}")
     
+
     
 
 if __name__ == "__main__":
-    # Set up logging
     logging.basicConfig(level=logging.INFO, 
                        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     
-    n_teams = 14
-    
+    parser = ArgumentParser()
+    parser.add_argument("n_teams", type=int, help="Number of teams (must be even)")
+
+    parser.add_argument("--symmetry_breaking", action="store_true",
+                        help="Apply symmetry breaking (default: False)")
+
+    parser.add_argument("--symmetry_level", type=str, default="auto",
+                        choices=["auto", "basic", "moderate", "aggressive"],
+                        help="Symmetry level (default: auto)")
+
+    parser.add_argument("--solver_name", type=str, default="cbc",
+                        choices=["cbc", "gurobi"],
+                        help="Solver name (default: cbc)")
+    args = parser.parse_args()
+
     # Build model
-    sts = STSModel(n_teams)
-    sts.build_model(symmetry_breaking=True, symmetry_level='auto')
+    sts = STSModel(args.n_teams)
+    sts.build_model(symmetry_breaking=args.symmetry_breaking, symmetry_level=args.symmetry_level)
 
     # Solve model
-    solution = sts.solve(solver_name='cbc', time_limit=300)
-
-    # Save solution
-    sts.save_solution("solution.json")
+    solution = sts.solve(solver_name=args.solver_name, time_limit=300)
     
     if solution['feasible']:
-        # Display in different formats
+        # Display
         print("\n" + "="*80)
-        print("TABLE FORMAT:")
-        sts.display_schedule(format_type='table')
+        sts.display_schedule()
         
-        # Save solution
-        sts.save_solution("solution.json")
+        if os.path.exists("/app/res"):
+            # Running in Docker
+            res_path = f"/app/res/MIP/{args.n_teams}.json"
+        else:
+            # Running locally
+            res_path = f"../../res/MIP/{args.n_teams}.json"
+        # Save
+        sts.save_solution(res_path)
     else:
         print(f"No feasible solution found. Status: {solution['termination_condition']}")
