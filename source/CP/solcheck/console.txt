@@ -1,0 +1,1 @@
+python C:\Users\xPica\Documents\CDMO_Proj_LiPiDo\source\CP\solcheck\solution_checker.py "C:\Users\xPica\Documents\CDMO_Proj_LiPiDo\source\CP\solcheck"
