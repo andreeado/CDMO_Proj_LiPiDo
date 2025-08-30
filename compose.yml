@@ -13,7 +13,7 @@ services:
     container_name: solver_cp
     volumes:
       - ./res:/app/res
-    command: ["./run.sh", "CP"]
+    entrypoint: ["./run.sh", "CP"]
 
   solve-SAT:
     build: .
@@ -21,7 +21,7 @@ services:
     container_name: solver_sat
     volumes:
       - ./res:/app/res
-    command: ["./run.sh", "SAT"]
+    entrypoint: ["./run.sh", "SAT"]
     
   solve-all:
     build: .

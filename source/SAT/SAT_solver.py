@@ -312,7 +312,7 @@ if __name__ == "__main__":
         if os.path.exists("/app/res"):
             res_path = f"/app/res/SAT/{args.n_teams}.json"
         else: # in local env
-            res_path = f"res/SAT/{args.n_teams}.json"
+            res_path = f"../../res/SAT/{args.n_teams}.json"
         
         format_and_save_solution(
             n=args.n_teams,

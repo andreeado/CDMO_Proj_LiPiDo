@@ -35,20 +35,20 @@ docker-compose build
 
 #### Run MIP on a specific instance:
 ```bash
-docker-compose run solve-mip n_teams
+docker-compose run solve-mip <n_teams> --solver_name <cbc|glpk|HiGHS>
 ```
 
 #### Run CP on a specific instance:
 ```bash
-docker-compose run solve-cp n_teams
+docker-compose run solve-cp <n_teams>
 ```
 
 #### Run SAT on a specific instance:
 ```bash
-docker-compose run solve-SAT n_teams
+docker-compose run solve-SAT <n_teams>
 ```
 
-### 4. Run All Approaches on All Instances
+### 3. Run All Approaches on All Instances
 
 ```bash
 docker-compose run solve-all
@@ -60,5 +60,3 @@ Results will be saved in the `res/` directory. The `res/` directory is mounted a
 - MIP results in `res/MIP/`
 - CP results in `res/CP/`
 - SAT results in `res/SAT/`
-
-```
