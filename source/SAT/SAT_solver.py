@@ -38,6 +38,7 @@ def STS_SAT(n, time_limit=300):
         circle_schedule_weeks[w].append(m)
     
     s = Solver()
+    s.set("timeout", time_limit * 1000) # set time_limite (in milliseconds)
 
     # Variable
     # match_period[m][p] is True if match m is in period p
@@ -50,7 +51,7 @@ def STS_SAT(n, time_limit=300):
     for w in range(W):
         matches_in_week = circle_schedule_weeks[w]
         for m in matches_in_week:
-            s.add(exactly_one(match_period[m], f"one_period_m{m}"))
+            s.add(exactly_one([match_period[m][p] for p in range(P)], f"one_period_m{m}"))
 
     # 2. Each period must contain exactly one match from each week
     for w in range(W):
@@ -99,9 +100,15 @@ def STS_SAT(n, time_limit=300):
     schedule_result = s.check()
     phase1_time = time.time() - start_time
     
-    if schedule_result != sat:
+    # Handle unsat case
+    if schedule_result == unsat:
         print(f"No feasible schedule found in {phase1_time:.2f}s")
         return None, phase1_time
+    
+    # Handle timeout case
+    if schedule_result == unknown:
+        print(f"Phase 1 timed out.")
+        return None, time_limit
     
     schedule_model = s.model()
     print(f"Feasible schedule found in {phase1_time:.2f}s")
@@ -192,8 +199,8 @@ def STS_SAT(n, time_limit=300):
         opt_solver.add(total_count <= mid)
 
         # Symmetry breaking constraint
-        # Mantain the original order for the first match
-        opt_solver.add(Not(swap[0]))
+        # Maintain the original order for the first match
+        opt_solver.add(Not(swap[1]))
         
         # Solve
         opt_result = opt_solver.check()
@@ -240,44 +247,53 @@ def format_and_save_solution(n: int, result: tuple, runtime: float, time_limit: 
     Formats the SAT solver output and saves it to a JSON file.
     """
     if result is None or result[0] is None:
-        print("Cannot save solution, no result found.")
-        return
+        is_timeout = runtime >= time_limit
 
-    _, fixed_schedule, swap_model, swap = result
-    
-    W = n - 1
-    P = n // 2
-    T1, T2 = build_inverse_tables(n)
-
-    # 1. Format the solution into the required (n/2)x(n-1) matrix
-    sol_matrix = [[[] for _ in range(W)] for _ in range(P)]
-    for (w, p), m in fixed_schedule.items():
-        try:
-            swap_val = is_true(swap_model.evaluate(swap[m]))
-        except Z3Exception:
-            swap_val = False
-
-        home, away = (T2[m], T1[m]) if swap_val else (T1[m], T2[m])
-        sol_matrix[p][w] = [home, away]
-
-    # 2. Calculate final metrics
-    total_imbalance, _ = calculate_imbalance(n, fixed_schedule, swap_model, swap)
-    
-    # If timeout is reached without solving, time should be 300 and optimal false.
-    is_optimal = runtime < time_limit
-    solve_time = math.floor(runtime)
-    if not is_optimal:
-        solve_time = time_limit
-
-    # 3. Construct the JSON output object
-    output_data = {
-        "z3_sat_solver": {
-            "time": solve_time,
-            "optimal": is_optimal,
-            "obj": total_imbalance,
-            "sol": sol_matrix
+        output_data = {
+            "z3_sat_solver": {
+                "time": time_limit if is_timeout else math.floor(runtime),
+                "optimal": not is_timeout,  # True for UNSAT, False for TIMEOUT
+                "obj": None,
+                "sol": []
+            }
         }
-    }
+
+    else:
+        _, fixed_schedule, swap_model, swap = result
+        
+        W = n - 1
+        P = n // 2
+        T1, T2 = build_inverse_tables(n)
+
+        # 1. Format the solution into the required (n/2)x(n-1) matrix
+        sol_matrix = [[[] for _ in range(W)] for _ in range(P)]
+        for (w, p), m in fixed_schedule.items():
+            try:
+                swap_val = is_true(swap_model.evaluate(swap[m]))
+            except Z3Exception:
+                swap_val = False
+
+            home, away = (T2[m], T1[m]) if swap_val else (T1[m], T2[m])
+            sol_matrix[p][w] = [home, away]
+
+        # 2. Calculate final metrics
+        total_imbalance, _ = calculate_imbalance(n, fixed_schedule, swap_model, swap)
+        
+        # If timeout is reached without solving, time should be 300 and optimal false.
+        is_optimal = runtime < time_limit
+        solve_time = math.floor(runtime)
+        if not is_optimal:
+            solve_time = time_limit
+
+        # 3. Construct the JSON output object
+        output_data = {
+            "z3_sat_solver": {
+                "time": solve_time,
+                "optimal": is_optimal,
+                "obj": total_imbalance,
+                "sol": sol_matrix
+            }
+        }
 
     # 4. Load existing data and update it
     if os.path.exists(filepath):
@@ -312,21 +328,17 @@ if __name__ == "__main__":
     # Run the solver
     result, runtime = STS_SAT(args.n_teams, args.time_limit)
 
-    if result:
-        # Check if the path exists in Docker env
-        if os.path.exists("/app/res"):
-            res_path = f"/app/res/SAT/{args.n_teams}.json"
-        else: # in local env
-            res_path = f"../../res/SAT/{args.n_teams}.json"
-        
-        format_and_save_solution(
-            n=args.n_teams,
-            result=result,
-            runtime=runtime,
-            time_limit=args.time_limit,
-            filepath=res_path
-        )
-    else:
-        print(f"Failed to find a solution for {args.n_teams} teams within the time limit.")
+    
+    # Check if the path exists in Docker env
+    if os.path.exists("/app/res"):
+        res_path = f"/app/res/SAT/{args.n_teams}.json"
+    else: # in local env
+        res_path = f"../../res/SAT/{args.n_teams}.json"
 
-
+    format_and_save_solution(
+        n=args.n_teams,
+        result=result,
+        runtime=runtime,
+        time_limit=args.time_limit,
+        filepath=res_path
+    )
