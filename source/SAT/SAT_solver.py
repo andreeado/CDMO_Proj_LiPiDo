@@ -195,8 +195,8 @@ def STS_SAT(n, time_limit=300):
             total_imbalance_bits.extend(imbalance_bits)
         
         # Now we constrain that the sum of all team imbalances <= mid
-        total_count = sum([If(bit, 1, 0) for bit in total_imbalance_bits])
-        opt_solver.add(total_count <= mid)
+        total_imbalance = sum([If(bit, 1, 0) for bit in total_imbalance_bits])
+        opt_solver.add(total_imbalance <= mid)
 
         # Symmetry breaking constraint
         # Maintain the original order for the first match
