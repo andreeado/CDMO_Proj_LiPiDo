@@ -88,7 +88,11 @@ def STS_SAT(n, time_limit=300):
         s.add(exactly_one(defective_indicators, f"exactly_one_defective_period_t{t}"))
 
     # Symmetry breaking constraints
-    # s.add(match_period[circle_schedule_full[(0,0)]][0])
+    # Fix the first week's periods assignments
+    first_week_matches = circle_schedule_weeks[0]
+    for p in range(P):
+        match_in_period = first_week_matches[p]
+        s.add(match_period[match_in_period][p] == True)
     
 
     print("Solving scheduling phase...")
@@ -187,8 +191,9 @@ def STS_SAT(n, time_limit=300):
         total_count = sum([If(bit, 1, 0) for bit in total_imbalance_bits])
         opt_solver.add(total_count <= mid)
 
-        # Symmetry breaking
-        # opt_solver.add(Not(swap[1]))
+        # Symmetry breaking constraint
+        # Mantain the original order for the first match
+        opt_solver.add(Not(swap[0]))
         
         # Solve
         opt_result = opt_solver.check()
@@ -223,7 +228,7 @@ def STS_SAT(n, time_limit=300):
         print(f"Best imbalance found: {best_imbalance}")
         return best_solution, total_time
     else:
-        print("Using basic solution with no swaps")
+        print("Using feasible solution with no optimization")
         swap = [BoolVal(False) for _ in range(M + 1)]
         results = (schedule_model, fixed_schedule, None, swap)
         return results, total_time
