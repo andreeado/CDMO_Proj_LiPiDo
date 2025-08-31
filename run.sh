@@ -6,28 +6,25 @@ shift
 
 case "$APPROACH" in
   MIP)
-    python source/MIP/mip_model.py "$@"
+    python source/MIP/mip_solver_pulp.py "$@"
     ;;
   CP)
     python source/CP/cp_model.py "$@"
     ;;
   SAT)
-    python source/SAT/sat_model.py "$@"
+    python source/SAT/SAT_solver.py "$@"
     ;;
   all)
-    for inst in {1..14}; do
-      echo "Running MIP on instance $inst"
-      python source/MIP/mip_model.py $inst
+    for inst in {2..8..2}; do
+      for solver in cbc glpk HiGHS; do
+        echo "Running MIP on instance $inst with solver $solver"
+        python source/MIP/mip_solver_pulp.py $inst --solver_name $solver
+      done
     done
 
-    for inst in {1..14}; do
-      echo "Running CP on instance $inst"
-      python source/CP/cp_model.py $inst
-    done
-
-    for inst in {1..18}; do
+    for inst in {2..8..2}; do
       echo "Running SAT on instance $inst"
-      python source/SAT/sat_model.py $inst
+      python source/SAT/SAT_solver.py $inst
     done
     ;;
   *)

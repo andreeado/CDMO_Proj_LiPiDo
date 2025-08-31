@@ -1,8 +1,34 @@
 {
   "cbc": {
-    "time": 0.0554652214050293,
+    "time": 0,
     "optimal": true,
-    "obj": 0,
+    "obj": 1,
+    "sol": [
+      [
+        [
+          2,
+          1
+        ]
+      ]
+    ]
+  },
+  "glpk": {
+    "time": 0,
+    "optimal": true,
+    "obj": 1,
+    "sol": [
+      [
+        [
+          1,
+          2
+        ]
+      ]
+    ]
+  },
+  "HiGHS": {
+    "time": 0,
+    "optimal": true,
+    "obj": 1,
     "sol": [
       [
         [
