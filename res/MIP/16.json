@@ -501,5 +501,11 @@
         ]
       ]
     ]
+  },
+  "cbc": {
+    "time": 300,
+    "optimal": false,
+    "obj": "None",
+    "sol": []
   }
 }

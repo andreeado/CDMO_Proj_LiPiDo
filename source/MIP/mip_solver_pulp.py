@@ -3,35 +3,46 @@ import os
 from pulp import *
 import time, math
 import logging
+from utils import *
 
 
 logger = logging.getLogger(__name__)
 
 def solve(solver_name, params, verbose): 
-    init_time = time.time()
     prob = LpProblem("STS", LpMinimize)
     try:
         data = create_data(params['n_teams'])
+        init_time = time.time()
         schedule= generate_circle_schedule(data['n_teams'])
         results = set_constraints_circle(prob, schedule, data)
-        remaining_time = params['timeout']-(time.time()-init_time)  # remove from timeout time for loading constraints
         match solver_name:
             case 'cbc':
-                solver=PULP_CBC_CMD(msg=verbose, timeLimit=remaining_time, presolve=False, cuts=False)
+                solver=PULP_CBC_CMD(msg=verbose, timeLimit=params['timeout'], presolve=False, cuts=False, threads=1)
             case 'glpk':
-                solver=GLPK_CMD(msg=verbose, timeLimit=math.ceil(remaining_time))
+                solver=GLPK_CMD(msg=verbose, timeLimit=math.ceil(params['timeout']))
             case 'HiGHS':
-                solver=HiGHS(msg=verbose, timeLimit=math.ceil(remaining_time))
+                solver=HiGHS(msg=verbose, timeLimit=math.ceil(params['timeout']), threads=1)
             case _:
                 raise KeyError('Unsupported solver')
         prob.solve(solver)
-    except MemoryError: # It can happen with big instances using full enumeration of the subtours
+    except MemoryError: 
         return [], "N/A", False, params['timeout']
     
     sol = []
-    obj = "N/A"
+    obj = "None"
     opt = False
     solve_time = math.floor(time.time() - init_time)
+
+    # Debug: Print the actual status
+    print(f"Solver status: {prob.sol_status}")
+    print(f"Status name: {LpStatus[prob.sol_status]}")
+    print(f"Objective value: {prob.objective.value()}")
+    
+    # Check if we have any feasible solution (even if not optimal)
+    if prob.objective.value() is not None:
+        sol = extract_schedule(*results)
+        obj = round(prob.objective.value())
+        print(f"Found solution with objective: {obj}")
     match prob.sol_status:
         # OPTIMAL SOLUTION FOUND
         case const.LpSolutionOptimal:
@@ -45,39 +56,20 @@ def solve(solver_name, params, verbose):
             obj = 0 if prob.objective.value() is None else round(prob.objective.value())
             opt = False
             solve_time = int(params['timeout'])
-        # INFEASIBLE SOLUTION OR NO SOLUTION FOUND OR UNBOUNDED
+        # INFEASIBLE SOLUTION
+        case const.LpSolutionInfeasible:
+            sol = []
+            obj = "None"
+            opt = True
+            solve_time = 0
+        # TIMEOUT
         case _:
             sol = []
-            obj ="N/A"
+            obj = "None"
             opt = False
             solve_time = int(params['timeout'])
     return create_solution_data(solver_name, sol, obj, opt, solve_time)
 
-def create_solution_data(solver_name, schedule, obj, optimal, solve_time):
-    """
-    Create solution data in the format expected by save_solution
-    """
-    return {
-        solver_name: {
-            "time": solve_time,
-            "optimal": optimal,
-            "obj": obj,
-            "sol": schedule
-        }
-    }
-
-def create_data(n_teams):
-    n_weeks = n_teams - 1
-    n_periods = n_teams // 2
-    data = {
-            'n_teams': n_teams,
-            'n_weeks': n_weeks,
-            'n_periods': n_periods,
-            'teams': list(range(n_teams)),
-            'weeks': list(range(n_weeks)),
-            'periods': list(range(n_periods))
-        }
-    return data
 
 def generate_circle_schedule(n_teams):
         """
@@ -164,6 +156,7 @@ def set_constraints_circle(problem, schedule, data):
 
     # Minimize the maximum imbalance
     problem += max_imbalance
+
     # --------- CONSTRAINTS ---------
     # Constraint 1: Each match from circle schedule must be assigned to exactly one period
     for w in range(n_weeks):
@@ -223,75 +216,6 @@ def set_constraints_circle(problem, schedule, data):
 
     return x, data
 
-def extract_schedule(x, data):
-    schedule = []
-    for period in data['periods']:
-        period_schedule = []
-        for week in data['weeks']:
-            for i in data['teams']:
-                for j in data['teams']:
-                    if i != j and value(x[i, j, week, period]) > 0.5:
-                        period_schedule.append([i+1, j+1])  # Convert to 1-indexed
-        schedule.append(period_schedule)
-    return schedule
-
-def save_solution(solution_data, filepath):
-    """
-    Save solution to JSON file in the required format
-    """
-    import json    
-    # Load existing data if file exists
-    if os.path.exists(filepath):
-        with open(filepath, "r") as f:
-            try:
-                data = json.load(f)
-            except json.JSONDecodeError:
-                data = {}
-    else:
-        data = {}
-
-    data.update(solution_data)
-    
-    with open(filepath, 'w') as f:
-        json.dump(data, f, indent=2)
-    
-    print(f"Solution saved to {filepath}")
-
-
-def display_schedule(schedule, n_teams, n_weeks, n_periods):
-    """
-    Display schedule as a table with periods as rows and weeks as columns
-    schedule format: List[List[List[int]]] - [period][week][matches]
-    """
-    if not schedule:
-        print("No feasible solution to display")
-        return
-
-    print(f"TOURNAMENT SCHEDULE - {n_teams} Teams")
-
-    # Header
-    header = f"{'Period':<12}"
-    for w in range(n_weeks):
-        header += f"{'Week' + str(w+1):<15}"
-    print("-" * len(header))
-    print(header)
-    print("-" * len(header))
-
-    # Schedule rows
-    for period in range(n_periods):
-        row = f"{period+1:<12}"
-        for week in range(n_weeks):
-            match = schedule[period][week]
-            if match and len(match) == 2:
-                # match is directly [team1, team2]
-                match_str = f"{match[0]} vs {match[1]}"
-            else:
-                match_str = "---"
-            row += f"{match_str:<15}"
-        print(row)
-
-    print(f"\n{'='*60}")
-
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, 
@@ -305,6 +229,9 @@ if __name__ == "__main__":
                         help="Solver name (default: cbc)")
     
     args = parser.parse_args()
+    if args.n_teams % 2 != 0:
+        raise ValueError("Number of teams must be an even integer")
+    
     # Set up parameters
     n_teams = args.n_teams
     params = {'timeout': 300,
@@ -324,17 +251,19 @@ if __name__ == "__main__":
     print(f"Objective: {obj}")
     print(f"Solve time: {solve_time}")
     
-    # Display the schedule if solution found
+    # Save solution to file
+    if os.path.exists("/app/res"):
+        # docker
+        res_path = f"/app/res/MIP/{args.n_teams}.json"
+    else:
+        # local
+        res_path = f"../../res/MIP/{args.n_teams}.json"
+    save_solution(result_data, res_path)
+
     if sol:
+        # Display the schedule
         display_schedule(sol, n_teams, n_teams-1, n_teams//2)
-        
-        # Save solution to file
-        if os.path.exists("/app/res"):
-            # docker
-            res_path = f"/app/res/MIP/{args.n_teams}.json"
-        else:
-            # local
-            res_path = f"../../res/MIP/{args.n_teams}.json"
-        save_solution(result_data, res_path)
+        # Analyze home-away balance
+        analyze_home_away_balance(sol, n_teams, n_teams-1, n_teams//2)
     else:
         print("No solution found")

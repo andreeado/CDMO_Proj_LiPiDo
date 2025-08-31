@@ -1,0 +1,8 @@
+{
+  "HiGHS": {
+    "time": 0,
+    "optimal": true,
+    "obj": "None",
+    "sol": []
+  }
+}

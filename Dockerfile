@@ -1,7 +1,6 @@
 FROM python:3.11-slim
 WORKDIR /app
 
-# Install system dependencies and CBC solver
 RUN apt-get update && apt-get install -y --no-install-recommends \
     wget \
     unzip \
@@ -10,7 +9,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get install -y glpk-utils \
     && rm -rf /var/lib/apt/lists/*
 
-# Upgrade pip and install Python packages
 RUN pip install --no-cache-dir \
     pyomo==6.9.2 \
     ply==3.11 \
@@ -23,7 +21,6 @@ RUN pip install --no-cache-dir \
 
 COPY res/ /app/res/
 COPY source/ /app/source/
-#COPY solution_checker.py /app/
 COPY run.sh /app/
 RUN chmod +x /app/run.sh
 ENV PYTHONPATH="/app"
