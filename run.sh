@@ -15,14 +15,14 @@ case "$APPROACH" in
     python source/SAT/SAT_solver.py "$@"
     ;;
   all)
-    for inst in {2..8..2}; do
+    for inst in {2..14..2}; do
       for solver in cbc glpk HiGHS; do
         echo "Running MIP on instance $inst with solver $solver"
         python source/MIP/mip_solver_pulp.py $inst --solver_name $solver
       done
     done
 
-    for inst in {2..8..2}; do
+    for inst in {2..20..2}; do
       echo "Running SAT on instance $inst"
       python source/SAT/SAT_solver.py $inst
     done
