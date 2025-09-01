@@ -31,7 +31,7 @@ def STS_SAT(n, time_limit=300):
 
     # Generate fixed schedule from circle method
     circle_schedule_weeks = {}
-    circle_schedule_full = circle_method_fixed_schedule(n)
+    circle_schedule_full = circle_method(n)
     for (w, p), m in circle_schedule_full.items():
         if w not in circle_schedule_weeks:
             circle_schedule_weeks[w] = []
@@ -70,7 +70,8 @@ def STS_SAT(n, time_limit=300):
                         team_plays_in_period.append(match_period[m][p])
             s.add(at_most_k(team_plays_in_period, 2, f"at_most_two_play_t{t}_p{p}"))
 
-    # 4. Each team has exactly one defective period (appears exactly once in that period)
+    # Implied constraints
+    # Each team has exactly one defective period (appears exactly once in that period)
     for t in range(1, n + 1):
         defective_indicators = []
         for p in range(P):
@@ -113,14 +114,14 @@ def STS_SAT(n, time_limit=300):
     schedule_model = s.model()
     print(f"Feasible schedule found in {phase1_time:.2f}s")
     
-    # Extract the fixed schedule
-    fixed_schedule = {}
+    # Extract the feasible schedule
+    feasible_schedule = {}
     for w in range(W):
         matches_in_week = circle_schedule_weeks[w]
         for m in matches_in_week:
             for p in range(P):
                 if is_true(schedule_model.evaluate(match_period[m][p])):
-                    fixed_schedule[(w, p)] = m
+                    feasible_schedule[(w, p)] = m
                     break
 
     # PHASE 2: Optimize home/away assignments using binary search
@@ -130,11 +131,11 @@ def STS_SAT(n, time_limit=300):
     if remaining_time <= 0:
         print("No time remaining for optimization")
         swap = [BoolVal(False) for _ in range(M + 1)]
-        results = (schedule_model, fixed_schedule, None, swap)
+        results = (schedule_model, feasible_schedule, None, swap)
         return results, time.time() - start_time
 
-    # Compute the initial imbalance
-    initial_imbalance, _ = calculate_imbalance(n, fixed_schedule, None, None)
+    # Compute the initial imbalance of the feasible solution
+    initial_imbalance, _ = calculate_imbalance(n, feasible_schedule, None, None)
     print(f"Initial imbalance (no swaps): {initial_imbalance}")
 
     # Binary search bounds
@@ -151,7 +152,7 @@ def STS_SAT(n, time_limit=300):
     team_home_vars = [[] for t in range(n + 1)]
     for t in range(1, n + 1):
         vars_t = []
-        for (w, p), m in fixed_schedule.items():
+        for (w, p), m in feasible_schedule.items():
             if T1[m] == t:
                 vars_t.append(Not(swap[m]))
             elif T2[m] == t:
@@ -207,12 +208,12 @@ def STS_SAT(n, time_limit=300):
         
         if opt_result == sat:
             swap_model = opt_solver.model()
-            actual_imbalance, team_imbalances = calculate_imbalance(n, fixed_schedule, swap_model, swap)
+            actual_imbalance, team_imbalances = calculate_imbalance(n, feasible_schedule, swap_model, swap)
             
             print(f"Solution found with actual imbalance {actual_imbalance} (target was <= {mid})")
             
             if actual_imbalance <= best_imbalance:
-                best_solution = (schedule_model, fixed_schedule, swap_model, swap)
+                best_solution = (schedule_model, feasible_schedule, swap_model, swap)
                 best_imbalance = actual_imbalance
             
             if actual_imbalance == 0:
@@ -237,7 +238,7 @@ def STS_SAT(n, time_limit=300):
     else:
         print("Using feasible solution with no optimization")
         swap = [BoolVal(False) for _ in range(M + 1)]
-        results = (schedule_model, fixed_schedule, None, swap)
+        results = (schedule_model, feasible_schedule, None, swap)
         return results, total_time
 
 
@@ -259,7 +260,7 @@ def format_and_save_solution(n: int, result: tuple, runtime: float, time_limit: 
         }
 
     else:
-        _, fixed_schedule, swap_model, swap = result
+        _, feasible_schedule, swap_model, swap = result
         
         W = n - 1
         P = n // 2
@@ -267,7 +268,7 @@ def format_and_save_solution(n: int, result: tuple, runtime: float, time_limit: 
 
         # 1. Format the solution into the required (n/2)x(n-1) matrix
         sol_matrix = [[[] for _ in range(W)] for _ in range(P)]
-        for (w, p), m in fixed_schedule.items():
+        for (w, p), m in feasible_schedule.items():
             try:
                 swap_val = is_true(swap_model.evaluate(swap[m]))
             except Z3Exception:
@@ -277,7 +278,7 @@ def format_and_save_solution(n: int, result: tuple, runtime: float, time_limit: 
             sol_matrix[p][w] = [home, away]
 
         # 2. Calculate final metrics
-        total_imbalance, _ = calculate_imbalance(n, fixed_schedule, swap_model, swap)
+        total_imbalance, _ = calculate_imbalance(n, feasible_schedule, swap_model, swap)
         
         # If timeout is reached without solving, time should be 300 and optimal false.
         is_optimal = runtime < time_limit

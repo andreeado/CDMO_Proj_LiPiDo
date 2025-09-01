@@ -2,6 +2,7 @@ from z3 import *
 from itertools import combinations
 import math
 
+
 # NAIVE PAIRWISE
 def at_least_one_np(bool_vars):
     return Or(bool_vars)
@@ -21,6 +22,7 @@ def at_most_k_np(bool_vars, k, name = ""):
 
 def exactly_k_np(bool_vars, k, name = ""):
     return And(at_most_k_np(bool_vars, k, name), at_least_k_np(bool_vars, k, name))
+
 
 # SEQUENTIAL
 def at_least_one_seq(bool_vars):
@@ -70,6 +72,7 @@ def at_most_k_seq(bool_vars, k, name):
 def exactly_k_seq(bool_vars, k, name):
     return And(at_most_k_seq(bool_vars, k, name), at_least_k_seq(bool_vars, k, name))
 
+
 # BITWISE
 def toBinary(num, length = None):
     num_bin = bin(num).split("b")[-1]
@@ -97,8 +100,8 @@ def at_most_one_bw(bool_vars, name):
 def exactly_one_bw(bool_vars, name):
     return And(at_least_one_bw(bool_vars), at_most_one_bw(bool_vars, name)) 
 
-#HEULE
 
+#HEULE
 def at_least_one_he(bool_vars):
     return at_least_one_np(bool_vars)
 

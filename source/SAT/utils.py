@@ -4,6 +4,7 @@ from z3 import *
 def match_ID(i,j,n):
     return ((i-1)*n+j)-(i*(i+1))//2
 
+
 def build_inverse_tables(n):
     M = n * (n - 1) // 2
     T1 = [0] * (M + 1)
@@ -17,7 +18,8 @@ def build_inverse_tables(n):
 
     return T1, T2
 
-def calculate_imbalance(n, fixed_schedule, swap_model, swap):
+
+def calculate_imbalance(n, feasible_schedule, swap_model, swap):
     T1, T2 = build_inverse_tables(n)
     
     total_imbalance = 0
@@ -26,7 +28,7 @@ def calculate_imbalance(n, fixed_schedule, swap_model, swap):
     for t in range(1, n + 1):
         home_games = 0
         
-        for (w, p), m in fixed_schedule.items():
+        for (w, p), m in feasible_schedule.items():
             if swap_model:
                 swap_val = is_true(swap_model.evaluate(swap[m]))
             else:
@@ -45,7 +47,8 @@ def calculate_imbalance(n, fixed_schedule, swap_model, swap):
     
     return total_imbalance, team_imbalances
 
-def circle_method_fixed_schedule(n):
+
+def circle_method(n):
     weeks = n - 1
     periods = n // 2
     schedule = {}
@@ -71,14 +74,15 @@ def circle_method_fixed_schedule(n):
     
     return schedule
 
-def print_schedule_optimized(n, fixed_schedule, swap_model, swap):
+
+def print_schedule(n, feasible_schedule, swap_model, swap):
     weeks = n - 1
     periods = n // 2
     T1, T2 = build_inverse_tables(n)
 
     schedule = [["" for _ in range(weeks)] for _ in range(periods)]
     
-    for (w, p), m in fixed_schedule.items():
+    for (w, p), m in feasible_schedule.items():
         if swap_model:
             swap_val = is_true(swap_model.evaluate(swap[m]))
         else:
