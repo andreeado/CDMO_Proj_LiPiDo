@@ -34,24 +34,17 @@ array[Periods, Weeks] of var Teams: y; % For each period and week, second team i
 % = Constraints =
 
 % Channeling Constraints Between implementations
-constraint forall(w in Weeks, p in Periods) (
+constraint forall(p in Periods, w in Weeks) (
   x[p, w] = table_t1[match_vars[p, w]] /\
   y[p, w] = table_t2[match_vars[p, w]]
 );
 
-% Circle Method: For each match, compute its designated week
-array[Matches] of int: week_of_match = [
-  if table_t2[m] = n then
-    table_t1[m] % team n plays team r in week r
-  else
-    min([w | w in 1..n-1 where ((table_t1[m] + table_t2[m]) mod (n-1)) = (2 * w) mod (n-1)])
-  endif
-| m in Matches
-];
+% All scheduled matches must be different (no repeats)
+constraint alldifferent(match_vars); 
 
-% Constraint: Each match must be scheduled in its designated week
-constraint forall(p in Periods, w in Weeks) (
-  week_of_match[match_vars[p, w]] = w
+% For each week, all teams must play exactly once
+constraint forall(w in Weeks) (
+  alldifferent([x[p, w] | p in Periods] ++ [y[p, w] | p in Periods])
 );
 
 % For each period and team, count the times the team appears in that period across all weeks
@@ -63,18 +56,6 @@ constraint forall(p in Periods) (
   )
 );
 
-% = Implied Constraints =
-
-% All scheduled matches must be different (no repeats)
-constraint alldifferent(match_vars); 
-
-
-% For each week, all teams must play exactly once
-constraint forall(w in Weeks) (
-  alldifferent([x[p, w] | p in Periods] ++ [y[p, w] | p in Periods])
-);
-
-
 % Each team has exactly one "defective" period (plays only once in that period)
 constraint forall(t in Teams) (
   sum(p in Periods) (
@@ -84,11 +65,16 @@ constraint forall(t in Teams) (
 
 % = Symmetry breaking =
 
-% Well ordering of rows by fixing first week schedule (according to the circle method)
-constraint
-  forall(p in Periods) (
-    match_vars[p, 1] = match_ID(p, n+1-p)
-  );
+% Well ordering of columns by fixing team 1 period choice
+constraint forall(w in Weeks) (
+  x[(w+2) div 2, w] = 1
+);
+
+% Well ordering of rows by fixing first week schedule
+constraint forall(p in Periods) (
+  match_vars[p, 1] = match_ID(2 * p - 1, 2 * p)
+);
+
 
 % === Solve Phase (COP objective only) ===
 
