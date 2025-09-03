@@ -16,7 +16,7 @@ case "$APPROACH" in
     ;;
   all)
     for inst in {2..14..2}; do
-      for solver in cbc glpk HiGHS; do
+      for solver in cbc gurobi HiGHS; do
         echo "Running MIP on instance $inst with solver $solver"
         python source/MIP/mip_solver_pulp.py $inst --solver_name $solver
       done

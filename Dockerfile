@@ -1,4 +1,4 @@
-FROM python:3.11-slim
+FROM gurobi/python:latest
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -6,11 +6,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     unzip \
     build-essential \
     coinor-cbc \
-    && apt-get install -y glpk-utils \
     && rm -rf /var/lib/apt/lists/*
 
 RUN pip install --no-cache-dir \
-    pyomo==6.9.2 \
     ply==3.11 \
     wheel==0.45.1 \
     pulp==2.9.0 \

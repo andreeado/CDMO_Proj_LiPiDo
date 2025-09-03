@@ -507,5 +507,11 @@
     "optimal": false,
     "obj": "None",
     "sol": []
+  },
+  "gurobi": {
+    "time": 0,
+    "optimal": true,
+    "obj": "None",
+    "sol": []
   }
 }

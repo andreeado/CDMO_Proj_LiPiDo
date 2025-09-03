@@ -35,7 +35,7 @@ docker-compose build
 
 #### Run MIP on a specific instance:
 ```bash
-docker-compose run solve-mip <n_teams> --solver_name <cbc|glpk|HiGHS>
+docker-compose run solve-mip <n_teams> --solver_name <cbc|gurobi|HiGHS>
 ```
 
 #### Run CP on a specific instance:

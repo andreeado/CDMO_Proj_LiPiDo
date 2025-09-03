@@ -5,6 +5,7 @@ services:
     container_name: solver_mip
     volumes:
       - ./res:/app/res
+      - ./gurobi.lic:/opt/gurobi/gurobi.lic:ro
     entrypoint: ["./run.sh", "MIP"]
     
   solve-cp:
@@ -29,4 +30,5 @@ services:
     container_name: solver_all
     volumes:
       - ./res:/app/res
+      - ./gurobi.lic:/opt/gurobi/gurobi.lic:ro
     command: ["./run.sh", "all"]

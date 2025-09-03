@@ -18,8 +18,8 @@ def solve(solver_name, params, verbose):
         match solver_name:
             case 'cbc':
                 solver=PULP_CBC_CMD(msg=verbose, timeLimit=params['timeout'], presolve=False, cuts=False, threads=1)
-            case 'glpk':
-                solver=GLPK_CMD(msg=verbose, timeLimit=math.ceil(params['timeout']))
+            case 'gurobi':
+                solver=GUROBI(msg=verbose, timeLimit=params['timeout'], threads=1)
             case 'HiGHS':
                 solver=HiGHS(msg=verbose, timeLimit=math.ceil(params['timeout']), threads=1)
             case _:
@@ -33,16 +33,6 @@ def solve(solver_name, params, verbose):
     opt = False
     solve_time = math.floor(time.time() - init_time)
 
-    # Debug: Print the actual status
-    print(f"Solver status: {prob.sol_status}")
-    print(f"Status name: {LpStatus[prob.sol_status]}")
-    print(f"Objective value: {prob.objective.value()}")
-    
-    # Check if we have any feasible solution (even if not optimal)
-    if prob.objective.value() is not None:
-        sol = extract_schedule(*results)
-        obj = round(prob.objective.value())
-        print(f"Found solution with objective: {obj}")
     match prob.sol_status:
         # OPTIMAL SOLUTION FOUND
         case const.LpSolutionOptimal:
@@ -225,7 +215,7 @@ if __name__ == "__main__":
     parser.add_argument("n_teams", type=int, help="Number of teams (must be even)")
 
     parser.add_argument("--solver_name", type=str, default="cbc",
-                        choices=["cbc", "glpk", "HiGHS"],
+                        choices=["cbc", "gurobi", "HiGHS"],
                         help="Solver name (default: cbc)")
     
     args = parser.parse_args()
