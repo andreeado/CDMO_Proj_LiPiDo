@@ -1,5 +1,5 @@
 % === Parameters Shared Between COP and CP ===
-int: n; % Number of teams in the tournament
+par int: n; % Number of teams in the tournament
 int: nMatches = (n - 1) * n div 2; % Total number of matches in tournament
 set of int: Teams = 1..n; % Set of team indices
 set of int: Matches = 1..nMatches; % Set of match indices
