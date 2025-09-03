@@ -4,11 +4,13 @@ import json
 import argparse
 import time
 from math import floor
+import os
 
 # Save solution to file
 if os.path.exists("/app/res"):
     # docker
-    MINIZINC_PATH = #CIAOANDREE
+    ciao = Andreea
+    # MINIZINC_PATH = #CIAOANDREE
 else:
     # local
     MINIZINC_PATH = "C:\\Users\\xPica\\AppData\\Local\\Programs\\MiniZinc\\minizinc.exe"
@@ -16,7 +18,8 @@ else:
 # Save solution to file
 if os.path.exists("/app/res"):
     # docker
-    MODEL_FILE = #CIAOANDREE
+    ciao = Andreea
+    #MODEL_FILE = #CIAOANDREE
 else:
     # local
     MODEL_FILE = "C:\\Users\\xPica\\Documents\\CDMO_Proj_LiPiDo\\source\\CP\\O.mzn"
@@ -37,8 +40,6 @@ def run_minizinc(n, solver, seed=1, time_limit=TIME_LIMIT_MS):
     result = subprocess.run(cmd, capture_output=True, text=True, timeout=time_limit/1000 + 30)
     wall_time = time.time() - start_time
     output_text = result.stdout + "\n" + result.stderr
-
-    print(output_text)
 
     # Extract solve time
     time_match = re.search(r'%%%mzn-stat:\s*solveTime\s*=\s*(\d+\.\d+)', output_text)
@@ -87,7 +88,6 @@ def main():
 
     solver = args.solver if args.solver else 'gecode'
     result = run_minizinc(args.n, solver, args.seed)
-    import os
     result_data = result
     if os.path.exists("/app/res"):
         # docker
