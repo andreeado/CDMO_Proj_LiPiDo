@@ -5,9 +5,23 @@ import argparse
 import time
 from math import floor
 
-MINIZINC_PATH = "C:\\Users\\xPica\\AppData\\Local\\Programs\\MiniZinc\\minizinc.exe"
-MODEL_FILE = "C:\\Users\\xPica\\Documents\\CDMO_Proj_LiPiDo\\source\\CP\\O.mzn"
-TIME_LIMIT_MS = 300  # 5 minutes
+# Save solution to file
+if os.path.exists("/app/res"):
+    # docker
+    MINIZINC_PATH = #CIAOANDREE
+else:
+    # local
+    MINIZINC_PATH = "C:\\Users\\xPica\\AppData\\Local\\Programs\\MiniZinc\\minizinc.exe"
+
+# Save solution to file
+if os.path.exists("/app/res"):
+    # docker
+    MODEL_FILE = #CIAOANDREE
+else:
+    # local
+    MODEL_FILE = "C:\\Users\\xPica\\Documents\\CDMO_Proj_LiPiDo\\source\\CP\\O.mzn"
+
+TIME_LIMIT_MS = 300000  # 5 minutes
 
 def run_minizinc(n, solver, seed=1, time_limit=TIME_LIMIT_MS):
     cmd = [
