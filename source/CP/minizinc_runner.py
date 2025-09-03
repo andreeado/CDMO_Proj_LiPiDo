@@ -95,11 +95,14 @@ MINIZINC_PATH = "C:\\Users\\xPica\\AppData\\Local\\Programs\\MiniZinc\\minizinc.
 # Data file to use (set to None if no data file needed)
 DATA_FILE = "C:\\Users\\xPica\\Documents\\CDMO_Proj_LiPiDo\\source\\CP\\data.dzn"
 
+# Base directory for models
+MODEL_BASE_DIR = "C:\\Users\\xPica\\Documents\\CDMO_Proj_LiPiDo\\source\\CP"
+
 # Solver to use
 SOLVER = "gecode"
 
 # Random seeds to test
-SEEDS = [2,5,7,9,15]  # Seeds from 1 to 15
+SEEDS = range(1, 6, 2)  # Seeds selection
 
 # Time limit in milliseconds
 TIME_LIMIT_MS = 300000  # 5 minutes
@@ -114,55 +117,62 @@ OUTPUT_FILE = "model_comparison_BB.xlsx"
 def main():
     parser = argparse.ArgumentParser(description='Compare multiple MiniZinc models with different seeds')
     parser.add_argument('models', nargs='+', help='MiniZinc model files (.mzn)')
-    
+
     args = parser.parse_args()
-    
-    # Use configuration variables instead of command line args
+
+    # Use configuration variables
     data_file = DATA_FILE
+    base_dir = MODEL_BASE_DIR
     solver = SOLVER
     seeds = SEEDS
     time_limit = TIME_LIMIT_MS
     output_file = OUTPUT_FILE
-    
-    print(f"Comparing {len(args.models)} models with {len(seeds)} seeds each")
-    print(f"Models: {[Path(m).stem for m in args.models]}")
+
+    # Prepend base directory to model names if not already a full path
+    model_files = [
+        str(Path(base_dir) / Path(m)) if not Path(m).is_absolute() else m
+        for m in args.models
+    ]
+
+    print(f"Comparing {len(model_files)} models with {len(seeds)} seeds each")
+    print(f"Models: {[Path(m).stem for m in model_files]}")
     print(f"Data: {data_file}")
     print(f"Solver: {solver}")
     print(f"Seeds: {seeds}")
     print(f"Time limit: {time_limit}ms")
     print(f"Output: {output_file}")
     print("-" * 60)
-    
+
     # Initialize results dictionary
     all_results = {'seed': seeds}
-    
+
     # For each model, run all seeds
-    for model_file in args.models:
+    for model_file in model_files:
         model_name = Path(model_file).stem
         print(f"\nRunning model: {model_name}")
         print("-" * 40)
-        
+
         # Initialize columns for this model
         all_results[f'{model_name}_time_s'] = []
         all_results[f'{model_name}_solved'] = []
         all_results[f'{model_name}_optimal'] = []
-        
+
         for i, seed in enumerate(seeds, 1):
             print(f"  Seed {seed} ({i}/{len(seeds)})... ", end='', flush=True)
-            
+
             result = run_minizinc_with_seed(
-                model_file, 
-                data_file, 
-                solver, 
-                seed, 
+                model_file,
+                data_file,
+                solver,
+                seed,
                 time_limit
             )
-            
+
             # Store results
             all_results[f'{model_name}_time_s'].append(result['solver_time_s'])
             all_results[f'{model_name}_solved'].append(result['solution_found'])
             all_results[f'{model_name}_optimal'].append(result['optimal'])
-            
+
             # Print progress
             if result['solution_found']:
                 time_str = f"{result['solver_time_s']:.3f}s" if result['solver_time_s'] else "N/A"
