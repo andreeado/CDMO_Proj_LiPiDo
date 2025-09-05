@@ -174,7 +174,7 @@ def STS_SAT(n, time_limit=300, random_seed=False):
         iteration_time = (time_limit - 1) - (time.time() - start_time)
 
         opt_solver = Solver()
-        opt_solver.set("timeout", iteration_time * 1000) # set time_limite (in milliseconds)
+        opt_solver.set("timeout", int(iteration_time * 1000)) # set time_limite (in milliseconds)
         if random_seed:
             opt_solver.set("random_seed", int(time.time()))
         
