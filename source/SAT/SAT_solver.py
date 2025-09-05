@@ -14,7 +14,7 @@ at_most_k = at_most_k_seq
 at_least_k = at_least_k_seq
 
 
-def STS_SAT(n, time_limit=300):
+def STS_SAT(n, time_limit=300, random_seed=False):
     start_time = time.time()
     
     W = n - 1
@@ -39,6 +39,8 @@ def STS_SAT(n, time_limit=300):
     
     s = Solver()
     s.set("timeout", time_limit * 1000) # set time_limite (in milliseconds)
+    if random_seed:
+        s.set("random_seed", int(time.time()))
 
     # Variable
     # match_period[m][p] is True if match m is in period p
@@ -169,6 +171,8 @@ def STS_SAT(n, time_limit=300):
         print(f"Trying total imbalance <= {mid}")
         
         opt_solver = Solver()
+        if random_seed:
+            opt_solver.set("random_seed", int(time.time()))
         
         # List of bits for the total imbalance (is the sum of all team imbalances)
         total_imbalance_bits = []
