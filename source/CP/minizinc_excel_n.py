@@ -3,9 +3,6 @@ import subprocess
 import pandas as pd
 import time
 from pathlib import Path
-import argparse
-import json
-import os
 from statistics import mean, stdev
 
 def run_minizinc(n, solver, seed=1, time_limit=300000, model_file=None):
@@ -84,7 +81,7 @@ def run_minizinc(n, solver, seed=1, time_limit=300000, model_file=None):
 # ============================================================================
 
 # MiniZinc executable path - modify this to point to your MiniZinc installation
-MINIZINC_PATH = "C:\\Users\\xPica\\AppData\\Local\\Programs\\MiniZinc\\minizinc.exe"  # Change to full path like "C:\\Program Files\\MiniZinc\\bin\\minizinc.exe"
+MINIZINC_PATH = "C:\\Users\\xPica\\AppData\\Local\\Programs\\MiniZinc\\minizinc.exe" 
 
 # Data file to use (set to None if no data file needed)
 DATA_FILE = "C:\\Users\\xPica\\Documents\\CDMO_Proj_LiPiDo\\source\\CP\\data.dzn"
@@ -92,17 +89,16 @@ DATA_FILE = "C:\\Users\\xPica\\Documents\\CDMO_Proj_LiPiDo\\source\\CP\\data.dzn
 # Base directory for models
 MODEL_BASE_DIR = "C:\\Users\\xPica\\Documents\\CDMO_Proj_LiPiDo\\source\\CP"
 
-SOLVERS = ["gecode"] # Add more solvers if needed
-NS = range(18, 20, 2) # Example n values
-SEEDS = range(77, 100, 11) # Example seeds
+SOLVERS = ["gecode"]
+NS = range(6, 22, 2)
+SEEDS = range(0, 100, 11)
 TIME_LIMIT_MS = 300000
-OUTPUT_FILE = "model_comparison_h4.xlsx"
+OUTPUT_FILE = "model_comparison_X.xlsx"
 MODELS = [
-    # "C:\\Users\\xPica\\Documents\\CDMO_Proj_LiPiDo\\source\\CP\\O.mzn",
+    "C:\\Users\\xPica\\Documents\\CDMO_Proj_LiPiDo\\source\\CP\\O.mzn",
     "C:\\Users\\xPica\\Documents\\CDMO_Proj_LiPiDo\\source\\CP\\OCP.mzn",
     "C:\\Users\\xPica\\Documents\\CDMO_Proj_LiPiDo\\source\\CP\\noSB.mzn",
     "C:\\Users\\xPica\\Documents\\CDMO_Proj_LiPiDo\\source\\CP\\noIMP.mzn",
-    
 ]
 
 # ============================================================================
