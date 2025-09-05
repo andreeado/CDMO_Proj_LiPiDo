@@ -25,6 +25,7 @@ def STS_SAT(n, time_limit=300, random_seed=False):
     print(f"Solving for {n} teams ===")
     print(f"Teams: {n}, Weeks: {W}, Periods: {P}, Matches: {M}")
     print(f"Time limit: {time_limit}s")
+    print(f"Random seed: {random_seed}")
 
     # PHASE 1: Find a feasible schedule
     print("\n=== PHASE 1: Finding feasible schedule ===")
@@ -325,13 +326,14 @@ if __name__ == "__main__":
     parser = ArgumentParser(description="Solve the Sports Tournament Scheduling problem using a SAT solver.")
     parser.add_argument("n_teams", type=int, help="Number of teams (must be even)")
     parser.add_argument("--time_limit", type=int, default=300, help="Time limit in seconds for the solver")
+    parser.add_argument("--random_seed", type=bool, default=False, help="Set a random seed for the solver")
     args = parser.parse_args()
 
     if args.n_teams % 2 != 0:
         raise ValueError("Number of teams must be an even number.")
 
     # Run the solver
-    result, runtime = STS_SAT(args.n_teams, args.time_limit)
+    result, runtime = STS_SAT(args.n_teams, args.time_limit, args.random_seed)
 
     
     # Check if the path exists in Docker env
