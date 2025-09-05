@@ -9,8 +9,7 @@ import os
 # Save solution to file
 if os.path.exists("/app/res"):
     # docker
-    ciao = Andreea
-    # MINIZINC_PATH = #CIAOANDREE
+    MINIZINC_PATH = "minizinc"
 else:
     # local
     MINIZINC_PATH = "C:\\Users\\xPica\\AppData\\Local\\Programs\\MiniZinc\\minizinc.exe"
@@ -18,8 +17,7 @@ else:
 # Save solution to file
 if os.path.exists("/app/res"):
     # docker
-    ciao = Andreea
-    #MODEL_FILE = #CIAOANDREE
+    MODEL_FILE = "/app/source/CP/model.mzn"
 else:
     # local
     MODEL_FILE = "C:\\Users\\xPica\\Documents\\CDMO_Proj_LiPiDo\\source\\CP\\O.mzn"

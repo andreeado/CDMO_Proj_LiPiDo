@@ -1,10 +1,15 @@
 {
     "gecode": {
-        "time": 0,
+        "time": 2,
         "optimal": true,
         "obj": 0,
         "sol": [
-  [ [1, 2]]
-]
+            [
+                [
+                    1,
+                    2
+                ]
+            ]
+        ]
     }
 }

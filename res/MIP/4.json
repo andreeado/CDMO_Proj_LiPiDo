@@ -4,5 +4,17 @@
     "optimal": true,
     "obj": "None",
     "sol": []
+  },
+  "cbc": {
+    "time": 300,
+    "optimal": false,
+    "obj": "None",
+    "sol": []
+  },
+  "gurobi": {
+    "time": 0,
+    "optimal": true,
+    "obj": "None",
+    "sol": []
   }
 }

@@ -1,6 +1,6 @@
 {
     "z3_sat_solver": {
-        "time": 11,
+        "time": 3,
         "optimal": true,
         "obj": 0,
         "sol": [
