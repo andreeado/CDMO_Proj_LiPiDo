@@ -42,6 +42,11 @@ docker-compose run solve-mip <n_teams> --solver_name <cbc|gurobi|HiGHS>
 ```bash
 docker-compose run solve-cp <n_teams>
 ```
+To give all the parameters to the solver:
+```bash
+docker-compose run solve-cp <n_teams> [solver] --seed <seed>
+```
+Default: `time_limit=300`, `random_seed=False`.
 
 #### Run SAT on a specific instance:
 ```bash
