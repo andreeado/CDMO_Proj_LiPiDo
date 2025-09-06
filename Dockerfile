@@ -1,6 +1,6 @@
 FROM minizinc/minizinc:latest AS minizinc
-
 FROM gurobi/python:latest
+
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -25,7 +25,6 @@ COPY --from=minizinc /usr/local/share/minizinc /usr/local/share/minizinc
 COPY --from=minizinc /usr/local/lib/ /usr/local/lib/
 
 ENV PATH="/usr/local/bin:${PATH}"
-COPY res/ /app/res/
 COPY source/ /app/source/
 COPY run.sh /app/
 RUN chmod +x /app/run.sh
