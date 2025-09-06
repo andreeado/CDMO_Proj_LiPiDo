@@ -1,0 +1,8 @@
+{
+    "z3_sat_solver": {
+        "time": 0,
+        "optimal": true,
+        "obj": null,
+        "sol": []
+    }
+}
