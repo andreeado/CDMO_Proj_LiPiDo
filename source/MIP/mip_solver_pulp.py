@@ -226,7 +226,7 @@ if __name__ == "__main__":
     n_teams = args.n_teams
     params = {'timeout': 300,
               'n_teams': n_teams}
-    verbose = 0  # Solver verbosity
+    verbose = 1  # Solver verbosity
     result_data = solve(args.solver_name, params, verbose)
     
     # Extract values from the result dictionary
@@ -254,6 +254,6 @@ if __name__ == "__main__":
         # Display the schedule
         display_schedule(sol, n_teams, n_teams-1, n_teams//2)
         # Analyze home-away balance
-        # analyze_home_away_balance(sol, n_teams, n_teams-1, n_teams//2)
+        analyze_home_away_balance(sol, n_teams, n_teams-1, n_teams//2)
     else:
         print("No solution found")
