@@ -20,11 +20,11 @@ if os.path.exists("/app/res"):
     MODEL_FILE = "/app/source/CP/model.mzn"
 else:
     # local
-    MODEL_FILE = "C:\\Users\\xPica\\Documents\\CDMO_Proj_LiPiDo\\source\\CP\\O.mzn"
+    MODEL_FILE = "C:\\Users\\xPica\\Documents\\CDMO_Proj_LiPiDo\\source\\CP\\model.mzn"
 
 TIME_LIMIT_MS = 300000  # 5 minutes
 
-def run_minizinc(n, solver, seed=1, time_limit=TIME_LIMIT_MS):
+def run_minizinc(n, solver, seed=777, time_limit=TIME_LIMIT_MS):
     cmd = [
         MINIZINC_PATH,
         MODEL_FILE,

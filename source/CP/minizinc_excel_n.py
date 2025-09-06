@@ -5,7 +5,7 @@ import time
 from pathlib import Path
 from statistics import mean, stdev
 
-def run_minizinc(n, solver, seed=1, time_limit=300000, model_file=None):
+def run_minizinc(n, solver, seed=777, time_limit=300000, model_file=None):
     """Directly run MiniZinc and parse output, as in minizinc_runner.py."""
     cmd = [
         MINIZINC_PATH,
@@ -90,16 +90,16 @@ DATA_FILE = "C:\\Users\\xPica\\Documents\\CDMO_Proj_LiPiDo\\source\\CP\\data.dzn
 MODEL_BASE_DIR = "C:\\Users\\xPica\\Documents\\CDMO_Proj_LiPiDo\\source\\CP"
 
 SOLVERS = ["gecode"]
-NS = range(6, 22, 2)
-SEEDS = range(0, 100, 11)
+NS = [20]
+SEEDS = [777]
 TIME_LIMIT_MS = 300000
-OUTPUT_FILE = "model_comparison_X.xlsx"
+OUTPUT_FILE = "model_comparison_777.xlsx"
 MODELS = [
-    "C:\\Users\\xPica\\Documents\\CDMO_Proj_LiPiDo\\source\\CP\\O.mzn",
-    "C:\\Users\\xPica\\Documents\\CDMO_Proj_LiPiDo\\source\\CP\\OCP.mzn",
-    "C:\\Users\\xPica\\Documents\\CDMO_Proj_LiPiDo\\source\\CP\\noSB.mzn",
-    "C:\\Users\\xPica\\Documents\\CDMO_Proj_LiPiDo\\source\\CP\\noIMP.mzn",
-]
+    "C:\\Users\\xPica\\Documents\\CDMO_Proj_LiPiDo\\source\\CP\\model.mzn",
+#    "C:\\Users\\xPica\\Documents\\CDMO_Proj_LiPiDo\\source\\CP\\OCP.mzn",
+#   "C:\\Users\\xPica\\Documents\\CDMO_Proj_LiPiDo\\source\\CP\\noSB.mzn",
+#   "C:\\Users\\xPica\\Documents\\CDMO_Proj_LiPiDo\\source\\CP\\noIMP.mzn",
+    ]
 
 # ============================================================================
 # END CONFIGURATION SECTION
