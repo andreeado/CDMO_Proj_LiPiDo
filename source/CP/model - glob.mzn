@@ -92,11 +92,13 @@ array[Teams] of var Periods: defective;
   % Each period must be defective for exactly two teams
   constraint global_cardinality(defective, [p | p in Periods], [2 | p in Periods]);
 
-  % For each team, in its defective period, it appears only once (as x or y across all weeks)
-  constraint forall(t in Teams) (
-    let { var Periods: p = defective[t] } in
-      count([x[p, w] | w in Weeks] ++ [y[p, w] | w in Weeks], t) = 1
-  );
+% For each period, enforce global cardinality: defective teams appear once, others appear twice
+constraint forall(p in Periods) (
+  let {
+    array[int] of int: card_list = [if defective[t] = p then 1 else 2 endif | t in Teams]
+  } in
+    global_cardinality([x[p, w] | w in Weeks] ++ [y[p, w] | w in Weeks], Teams, card_list)
+);
 
 % = Symmetry breaking =
 

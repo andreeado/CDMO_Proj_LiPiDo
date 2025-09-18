@@ -85,14 +85,14 @@ constraint forall(p in Periods) (
 
 % = Implied Constraints =
 
-/*
+
 % Each team has exactly one "defective" period (plays only once in that period)
 constraint forall(t in Teams) (
   sum(p in Periods) (
     bool2int(sum(w in Weeks) (bool2int(x[p,w] = t) + bool2int(y[p,w] = t)) = 1)
   ) = 1
 );
-*/
+
 
 % = Symmetry breaking =
 
