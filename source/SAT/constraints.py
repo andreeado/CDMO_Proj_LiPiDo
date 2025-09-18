@@ -48,12 +48,14 @@ def at_least_k_seq(bool_vars, k, name):
 
 def at_most_k_seq(bool_vars, k, name):
     n = len(bool_vars)
-    if n == 0 or k >= n or k<0:
-        return []
+    if n == 0 or k >= n:
+        return BoolVal(True)
+    if k < 0:
+        return BoolVal(False)
     if k == 0:
-        return [Not(b) for b in bool_vars]
+        return And([Not(b) for b in bool_vars])
     if n == 1:
-        return [] if k>= 1 else [Not(bool_vars[0])]
+        return BoolVal(True if k >= 1 else False)
 
     s = [[Bool(f"s_{name}_{i}_{j}") for j in range(k)] for i in range(n - 1)]
     constraints = []

@@ -170,31 +170,43 @@ def STS_SAT(n, time_limit=300, random_seed=False):
     while lower_bound <= upper_bound and time.time() - start_time < time_limit - 1:
         mid = (lower_bound + upper_bound) // 2
         print(f"Trying total imbalance <= {mid}")
-        
+
         iteration_time = (time_limit - 1) - (time.time() - start_time)
 
         opt_solver = Solver()
         opt_solver.set("timeout", int(iteration_time * 1000)) # set time_limite (in milliseconds)
+
         if random_seed:
             opt_solver.set("random_seed", int(time.time()))
         
-        # List of bits for the total imbalance (is the sum of all team imbalances)
+        # List of bits for the total imbalance
         total_imbalance_bits = []
         
         for t in range(1, n + 1):
-            # Count home games for team t
-            home_count = sum([If(var, 1, 0) for var in team_home_vars[t]])
-            
             # Create the imbalance bits directly from home_count
             imbalance_bits = [Bool(f"team{t}_imb_bit_{i}") for i in range(max_team_imbalance)]
+            home_vars_t = team_home_vars[t]
+
+            target = (n - 1) / 2  # ideal values for home/away games
             
             # Model the imbalance directly from the home_count value
-            # imbalance >= k iff abs(2*home_count - (n-1)) >= k+1
-            raw_diff = 2 * home_count - (n-1)
             for k in range(1, max_team_imbalance + 1):
-                pos_cond = And(raw_diff >= 0, raw_diff >= k+1)
-                neg_cond = And(raw_diff < 0, raw_diff <= -(k+1))
-                opt_solver.add(imbalance_bits[k-1] == Or(pos_cond, neg_cond))
+                conds = []
+
+                # case too many home games
+                upper_bound_hg = math.ceil(target + k)
+                if upper_bound_hg <= len(home_vars_t):
+                    conds.append(PbGe([(hv,1) for hv in home_vars_t], upper_bound_hg))
+
+                # case too few away games
+                lower_bound_hg = math.floor(target - k)
+                if lower_bound_hg >= 0:
+                    conds.append(PbLe([(hv,1) for hv in home_vars_t], lower_bound_hg))
+
+                if conds:
+                    opt_solver.add(imbalance_bits[k-1] == Or(*conds))
+                else:
+                    opt_solver.add(imbalance_bits[k-1] == False)
 
             # 4. Add ordering constraint for imbalance_bits
             for i in range(1, len(imbalance_bits)):
@@ -203,9 +215,8 @@ def STS_SAT(n, time_limit=300, random_seed=False):
             # Add these bits to total imbalance calculation
             total_imbalance_bits.extend(imbalance_bits)
         
-        # Now we constrain that the sum of all team imbalances <= mid
-        total_imbalance = sum([If(bit, 1, 0) for bit in total_imbalance_bits])
-        opt_solver.add(total_imbalance <= mid)
+        # Now we constrain that the total imbalances <= mid
+        opt_solver.add(at_most_k(total_imbalance_bits, mid, f"total_imbalance_at_most_{mid}"))
 
         # Symmetry breaking constraint
         # Maintain the original order for the first match
@@ -278,7 +289,7 @@ def format_and_save_solution(n: int, result: tuple, runtime: float, time_limit: 
         sol_matrix = [[[] for _ in range(W)] for _ in range(P)]
         for (w, p), m in feasible_schedule.items():
             try:
-                swap_val = is_true(swap_model.evaluate(swap[m]))
+                swap_val = is_true(swap_model.evaluate(swap[m])) if swap_model else False
             except Z3Exception:
                 swap_val = False
 
