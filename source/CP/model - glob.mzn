@@ -95,7 +95,7 @@ array[Teams] of var Periods: defective;
 % For each period, enforce global cardinality: defective teams appear once, others appear twice
 constraint forall(p in Periods) (
   let {
-    array[int] of int: card_list = [if defective[t] = p then 1 else 2 endif | t in Teams]
+    array[int] of var int: card_list = [if defective[t] = p then 1 else 2 endif | t in Teams]
   } in
     global_cardinality([x[p, w] | w in Weeks] ++ [y[p, w] | w in Weeks], Teams, card_list)
 );
