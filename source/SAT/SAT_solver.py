@@ -193,15 +193,36 @@ def STS_SAT(n, time_limit=300, random_seed=False):
             for k in range(1, max_team_imbalance + 1):
                 conds = []
 
-                # case too many home games
+                # case too many home games: sum(home_vars_t) >= upper_bound_hg
                 upper_bound_hg = math.ceil(target + k)
                 if upper_bound_hg <= len(home_vars_t):
-                    conds.append(PbGe([(hv,1) for hv in home_vars_t], upper_bound_hg))
+                    geq_var = Bool(f"too_many_home_t{t}_k{upper_bound_hg}")
+                    
+                    opt_solver.add(Or(Not(geq_var),
+                                      at_least_k(home_vars_t, upper_bound_hg,
+                                                 f"t{t}_at_least_{upper_bound_hg}")))
+                    
+                    if upper_bound_hg > 0:
+                        opt_solver.add(Or(geq_var,
+                                          at_most_k(home_vars_t, upper_bound_hg - 1,
+                                                    f"t{t}_at_most_{upper_bound_hg-1}")))
+                    conds.append(geq_var)
 
-                # case too few away games
+                # case too few home games: sum(home_vars_t) <= lower_bound_hg
                 lower_bound_hg = math.floor(target - k)
                 if lower_bound_hg >= 0:
-                    conds.append(PbLe([(hv,1) for hv in home_vars_t], lower_bound_hg))
+                    leq_var = Bool(f"too_few_home_t{t}_k{lower_bound_hg}")
+
+                    opt_solver.add(Or(Not(leq_var),
+                                      at_most_k(home_vars_t, lower_bound_hg,
+                                                f"t{t}_at_most_{lower_bound_hg}")))
+                    
+                    if lower_bound_hg < len(home_vars_t):
+                        opt_solver.add(Or(leq_var,
+                                          at_least_k(home_vars_t, lower_bound_hg + 1,
+                                                     f"t{t}_at_least_{lower_bound_hg+1}")))
+                    conds.append(leq_var)
+
 
                 if conds:
                     opt_solver.add(imbalance_bits[k-1] == Or(*conds))
