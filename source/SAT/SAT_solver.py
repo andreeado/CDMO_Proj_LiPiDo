@@ -14,21 +14,21 @@ at_most_k = at_most_k_seq
 at_least_k = at_least_k_seq
 
 
-def STS_SAT(n, time_limit=300, random_seed=False):
+def STS_SAT(n, time_limit=300, optimality=False, random_seed=False, verbose=False):
     start_time = time.time()
     
     W = n - 1
     P = n // 2
     M = n * (n - 1) // 2
     T1, T2 = build_inverse_tables(n)
+    if verbose:
+        print(f"Solving for {n} teams ===")
+        print(f"Teams: {n}, Weeks: {W}, Periods: {P}, Matches: {M}")
+        print(f"Time limit: {time_limit}s")
+        print(f"Random seed: {random_seed}")
 
-    print(f"Solving for {n} teams ===")
-    print(f"Teams: {n}, Weeks: {W}, Periods: {P}, Matches: {M}")
-    print(f"Time limit: {time_limit}s")
-    print(f"Random seed: {random_seed}")
-
-    # PHASE 1: Find a feasible schedule
-    print("\n=== PHASE 1: Finding feasible schedule ===")
+        # PHASE 1: Find a feasible schedule
+        print("\n=== PHASE 1: Finding feasible schedule ===")
 
     # Generate fixed schedule from circle method
     circle_schedule_weeks = {}
@@ -99,23 +99,26 @@ def STS_SAT(n, time_limit=300, random_seed=False):
         match_in_period = first_week_matches[p]
         s.add(match_period[match_in_period][p] == True)
     
-
-    print("Solving scheduling phase...")
+    if verbose:
+        print("Solving scheduling phase...")
     schedule_result = s.check()
     phase1_time = time.time() - start_time
     
     # Handle unsat case
     if schedule_result == unsat:
-        print(f"No feasible schedule found in {phase1_time:.2f}s")
+        if verbose:    
+            print(f"No feasible schedule found in {phase1_time:.2f}s")
         return None, phase1_time
     
     # Handle timeout case
     if schedule_result == unknown:
-        print(f"Phase 1 timed out.")
+        if verbose:
+            print(f"Phase 1 timed out.")
         return None, time_limit
     
     schedule_model = s.model()
-    print(f"Feasible schedule found in {phase1_time:.2f}s")
+    if verbose:
+        print(f"Feasible schedule found in {phase1_time:.2f}s")
     
     # Extract the feasible schedule
     feasible_schedule = {}
@@ -128,158 +131,169 @@ def STS_SAT(n, time_limit=300, random_seed=False):
                     break
 
     # PHASE 2: Optimize home/away assignments using binary search
-    print("\n=== PHASE 2: Optimizing home/away assignments ===")
-    
-    remaining_time = time_limit - phase1_time
-    if remaining_time <= 0:
-        print("No time remaining for optimization")
-        swap = [BoolVal(False) for _ in range(M + 1)]
-        results = (schedule_model, feasible_schedule, None, swap)
-        return results, time.time() - start_time
+    if optimality:
+        if verbose:
+            print("\n=== PHASE 2: Optimizing home/away assignments ===")
 
-    # Compute the initial imbalance of the feasible solution
-    initial_imbalance, _ = calculate_imbalance(n, feasible_schedule, None, None)
-    print(f"Initial imbalance (no swaps): {initial_imbalance}")
+        remaining_time = time_limit - phase1_time
+        if remaining_time <= 0:
+            if verbose:
+                print("No time remaining for optimization")
+            swap = [BoolVal(False) for _ in range(M + 1)]
+            results = (schedule_model, feasible_schedule, None, swap)
+            return results, time.time() - start_time
 
-    # Binary search bounds
-    lower_bound = 0
-    upper_bound = initial_imbalance
-    
-    best_solution = None
-    best_imbalance = initial_imbalance
+        # Compute the initial imbalance of the feasible solution
+        initial_imbalance, _ = calculate_imbalance(n, feasible_schedule, None, None)
+        if verbose:
+            print(f"Initial imbalance (no swaps): {initial_imbalance}")
 
-    # Swap variables
-    swap = [Bool(f"swap_m{m}") for m in range(M + 1)]
+        # Binary search bounds
+        lower_bound = 0
+        upper_bound = W
 
-    # Pre-compute the home_vars for each team
-    team_home_vars = [[] for t in range(n + 1)]
-    for t in range(1, n + 1):
-        vars_t = []
-        for (w, p), m in feasible_schedule.items():
-            if T1[m] == t:
-                vars_t.append(Not(swap[m]))
-            elif T2[m] == t:
-                vars_t.append(swap[m])
-        team_home_vars[t] = vars_t
+        best_solution = None
+        best_imbalance = initial_imbalance
 
+        # Swap variables
+        swap = [Bool(f"swap_m{m}") for m in range(M + 1)]
 
-    max_team_imbalance = min(n - 1, initial_imbalance)
-
-    print(f"Starting binary search optimization (bounds: {lower_bound}-{upper_bound})")
-    
-    while lower_bound <= upper_bound and time.time() - start_time < time_limit - 1:
-        mid = (lower_bound + upper_bound) // 2
-        print(f"Trying total imbalance <= {mid}")
-
-        iteration_time = (time_limit - 1) - (time.time() - start_time)
-
-        opt_solver = Solver()
-        opt_solver.set("timeout", int(iteration_time * 1000)) # set time_limite (in milliseconds)
-
-        if random_seed:
-            opt_solver.set("random_seed", int(time.time()))
-        
-        # List of bits for the total imbalance
-        total_imbalance_bits = []
-        
+        # Pre-compute the home_vars for each team
+        team_home_vars = [[] for t in range(n + 1)]
         for t in range(1, n + 1):
-            # Create the imbalance bits directly from home_count
-            imbalance_bits = [Bool(f"team{t}_imb_bit_{i}") for i in range(max_team_imbalance)]
-            home_vars_t = team_home_vars[t]
-
-            target = (n - 1) / 2  # ideal values for home/away games
-            
-            # Model the imbalance directly from the home_count value
-            for k in range(1, max_team_imbalance + 1):
-                conds = []
-
-                # case too many home games: sum(home_vars_t) >= upper_bound_hg
-                upper_bound_hg = math.ceil(target + k)
-                if upper_bound_hg <= len(home_vars_t):
-                    geq_var = Bool(f"too_many_home_t{t}_k{upper_bound_hg}")
-                    
-                    opt_solver.add(Or(Not(geq_var),
-                                      at_least_k(home_vars_t, upper_bound_hg,
-                                                 f"t{t}_at_least_{upper_bound_hg}")))
-                    
-                    if upper_bound_hg > 0:
-                        opt_solver.add(Or(geq_var,
-                                          at_most_k(home_vars_t, upper_bound_hg - 1,
-                                                    f"t{t}_at_most_{upper_bound_hg-1}")))
-                    conds.append(geq_var)
-
-                # case too few home games: sum(home_vars_t) <= lower_bound_hg
-                lower_bound_hg = math.floor(target - k)
-                if lower_bound_hg >= 0:
-                    leq_var = Bool(f"too_few_home_t{t}_k{lower_bound_hg}")
-
-                    opt_solver.add(Or(Not(leq_var),
-                                      at_most_k(home_vars_t, lower_bound_hg,
-                                                f"t{t}_at_most_{lower_bound_hg}")))
-                    
-                    if lower_bound_hg < len(home_vars_t):
-                        opt_solver.add(Or(leq_var,
-                                          at_least_k(home_vars_t, lower_bound_hg + 1,
-                                                     f"t{t}_at_least_{lower_bound_hg+1}")))
-                    conds.append(leq_var)
+            vars_t = []
+            for (w, p), m in feasible_schedule.items():
+                if T1[m] == t:
+                    vars_t.append(Not(swap[m]))
+                elif T2[m] == t:
+                    vars_t.append(swap[m])
+            team_home_vars[t] = vars_t
 
 
-                if conds:
-                    opt_solver.add(imbalance_bits[k-1] == Or(*conds))
-                else:
-                    opt_solver.add(imbalance_bits[k-1] == False)
+        max_team_imbalance = min(n - 1, initial_imbalance)
+        if verbose:
+            print(f"Starting binary search optimization (bounds: {lower_bound}-{upper_bound})")
 
-            # 4. Add ordering constraint for imbalance_bits
-            for i in range(1, len(imbalance_bits)):
-                opt_solver.add(Or(Not(imbalance_bits[i]), imbalance_bits[i-1]))
-            
-            # Add these bits to total imbalance calculation
-            total_imbalance_bits.extend(imbalance_bits)
-        
-        # Now we constrain that the total imbalances <= mid
-        opt_solver.add(at_most_k(total_imbalance_bits, mid, f"total_imbalance_at_most_{mid}"))
+        while lower_bound <= upper_bound and time.time() - start_time < time_limit - 1:
+            mid = (lower_bound + upper_bound) // 2
+            if verbose:
+                print(f"Trying imbalance <= {mid} for every team")
 
-        # Symmetry breaking constraint
-        # Maintain the original order for the first match
-        opt_solver.add(Not(swap[1]))
-        
-        # Solve
-        opt_result = opt_solver.check()
-        
-        if opt_result == sat:
-            swap_model = opt_solver.model()
-            actual_imbalance, team_imbalances = calculate_imbalance(n, feasible_schedule, swap_model, swap)
-            
-            print(f"Solution found with actual imbalance {actual_imbalance} (target was <= {mid})")
-            
-            if actual_imbalance <= best_imbalance:
-                best_solution = (schedule_model, feasible_schedule, swap_model, swap)
-                best_imbalance = actual_imbalance
-            
-            if actual_imbalance == 0:
-                print("Optimal solution found!")
-                break
-                
-            # Update bounds
-            upper_bound = min(mid - 1, actual_imbalance - 1)
+            iteration_time = (time_limit - 1) - (time.time() - start_time)
+
+            opt_solver = Solver()
+            opt_solver.set("timeout", int(iteration_time * 1000)) # set time_limite (in milliseconds)
+
+            if random_seed:
+                opt_solver.set("random_seed", int(time.time()))
+
+            for t in range(1, n + 1):
+                # Create the imbalance bits directly from home_count
+                imbalance_bits = [Bool(f"team{t}_imb_bit_{i}") for i in range(max_team_imbalance)]
+                home_vars_t = team_home_vars[t]
+
+                target = (n - 1) / 2  # ideal values for home/away games
+
+                for k in range(1, max_team_imbalance + 1):
+                    conds = []
+
+                    # case too many home games: sum(home_vars_t) >= upper_bound_hg
+                    upper_bound_hg = math.ceil(target + k)
+                    if upper_bound_hg <= len(home_vars_t):
+                        geq_var = Bool(f"too_many_home_t{t}_k{upper_bound_hg}")
+
+                        opt_solver.add(Or(Not(geq_var),
+                                          at_least_k(home_vars_t, upper_bound_hg,
+                                                     f"t{t}_at_least_{upper_bound_hg}")))
+
+                        if upper_bound_hg > 0:
+                            opt_solver.add(Or(geq_var,
+                                              at_most_k(home_vars_t, upper_bound_hg - 1,
+                                                        f"t{t}_at_most_{upper_bound_hg-1}")))
+                        conds.append(geq_var)
+
+                    # case too few home games: sum(home_vars_t) <= lower_bound_hg
+                    lower_bound_hg = math.floor(target - k)
+                    if lower_bound_hg >= 0:
+                        leq_var = Bool(f"too_few_home_t{t}_k{lower_bound_hg}")
+
+                        opt_solver.add(Or(Not(leq_var),
+                                          at_most_k(home_vars_t, lower_bound_hg,
+                                                    f"t{t}_at_most_{lower_bound_hg}")))
+
+                        if lower_bound_hg < len(home_vars_t):
+                            opt_solver.add(Or(leq_var,
+                                              at_least_k(home_vars_t, lower_bound_hg + 1,
+                                                         f"t{t}_at_least_{lower_bound_hg+1}")))
+                        conds.append(leq_var)
+
+
+                    if conds:
+                        opt_solver.add(imbalance_bits[k-1] == Or(*conds))
+                    else:
+                        opt_solver.add(imbalance_bits[k-1] == False)
+
+                # 4. Add ordering constraint for imbalance_bits
+                for i in range(1, len(imbalance_bits)):
+                    opt_solver.add(Or(Not(imbalance_bits[i]), imbalance_bits[i-1]))
+
+                # Add constraint imbalance_t <= mid
+                for i in range(mid, max_team_imbalance):
+                    opt_solver.add(Not(imbalance_bits[i]))
+
+            # Symmetry breaking constraint
+            # Maintain the original order for the first match
+            opt_solver.add(Not(swap[1]))
+
+            # Solve
+            opt_result = opt_solver.check()
+
+            if opt_result == sat:
+                swap_model = opt_solver.model()
+                actual_imbalance, team_imbalances = calculate_imbalance(n, feasible_schedule, swap_model, swap)
+
+                if verbose:
+                    print(f"Solution found with actual total imbalance {actual_imbalance}")
+
+                if actual_imbalance <= best_imbalance:
+                    best_solution = (schedule_model, feasible_schedule, swap_model, swap)
+                    best_imbalance = actual_imbalance
+
+                if actual_imbalance == 0:
+                    if verbose:
+                        print("Optimal solution found!")
+                    break
+
+                # Update bounds
+                upper_bound = mid-1
+            else:
+                if verbose:
+                    print(f"No solution with imbalance <= {mid} for every team")
+                lower_bound = mid + 1
+
+        total_time = time.time() - start_time
+        if verbose:
+            print(f"\n=== FINAL RESULTS ===")
+            print(f"Total time: {total_time:.2f}s")
+            print(f"Phase 1 (scheduling): {phase1_time:.2f}s")
+            print(f"Phase 2 (optimization): {total_time - phase1_time:.2f}s")
+
+        if best_solution:
+            if verbose:
+                print(f"Best imbalance found: {best_imbalance}")
+            return best_solution, total_time
         else:
-            print(f"No solution with imbalance <= {mid}")
-            lower_bound = mid + 1
-    
-    total_time = time.time() - start_time
-    print(f"\n=== FINAL RESULTS ===")
-    print(f"Total time: {total_time:.2f}s")
-    print(f"Phase 1 (scheduling): {phase1_time:.2f}s")
-    print(f"Phase 2 (optimization): {total_time - phase1_time:.2f}s")
-    
-    if best_solution:
-        print(f"Best imbalance found: {best_imbalance}")
-        return best_solution, total_time
+            if verbose:
+                print("Using feasible solution with no optimization")
+            swap = [BoolVal(False) for _ in range(M + 1)]
+            results = (schedule_model, feasible_schedule, None, swap)
+            return results, total_time
+        
+    # If we asked only for the satisfiable solution
     else:
-        print("Using feasible solution with no optimization")
         swap = [BoolVal(False) for _ in range(M + 1)]
         results = (schedule_model, feasible_schedule, None, swap)
-        return results, total_time
+        return results, phase1_time
 
 
 
@@ -361,14 +375,17 @@ if __name__ == "__main__":
     parser = ArgumentParser(description="Solve the Sports Tournament Scheduling problem using a SAT solver.")
     parser.add_argument("n_teams", type=int, help="Number of teams (must be even)")
     parser.add_argument("--time_limit", type=int, default=300, help="Time limit in seconds for the solver")
-    parser.add_argument("--random_seed", type=bool, default=False, help="Set a random seed for the solver")
+    parser.add_argument("--optimality", action='store_true', help="Search for the optimal solution (default: False)")
+    parser.add_argument("--random_seed", action='store_true', help="Set a random seed for the solver (default: False)")
+    parser.add_argument("--verbose", action='store_true', help="Receive feedback from the solver (default: False)")
+
     args = parser.parse_args()
 
     if args.n_teams % 2 != 0:
         raise ValueError("Number of teams must be an even number.")
 
     # Run the solver
-    result, runtime = STS_SAT(args.n_teams, args.time_limit, args.random_seed)
+    result, runtime = STS_SAT(args.n_teams, args.time_limit, args.optimality, args.random_seed, args.verbose)
 
     
     # Check if the path exists in Docker env

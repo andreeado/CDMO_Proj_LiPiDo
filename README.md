@@ -54,9 +54,9 @@ docker-compose run solve-SAT <n_teams>
 ```
 To give all the parameters to the solver:
 ```bash
-docker-compose run solve-SAT <n_teams> --time_limit <time_limit> --random_seed <random_seed>
+docker-compose run solve-SAT <n_teams> --time_limit <time_limit> --optimality --random_seed --verbose
 ```
-Default: `time_limit=300`, `random_seed=False`.
+Default: `time_limit=300`, `optimality=False`, `random_seed=False`, `verbose=False`
 
 ### 3. Run All Approaches on All Instances
 
