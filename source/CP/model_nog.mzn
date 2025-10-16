@@ -14,7 +14,8 @@ array[Matches] of int: table_t2 = [t2 | t1 in Teams, t2 in Teams where t1 < t2];
 array[Matches] of var bool: swap; % For each match, 0 means no swap (t1 is home), 1 means swap (t2 is home)
 
 % Count how many times each team is home/away
-array[Teams] of var 1..n-1: imbalance; % For each team, imbalance in home/away games
+set of int: stepped = { i | i in 1..n-1 where i mod 2 = 1 };
+array[Teams] of var stepped: imbalance; % For each team, imbalance in home/away games
 
   
 % For each team, calculate imbalance: abs(2 * home_count - (n - 1)) - 1

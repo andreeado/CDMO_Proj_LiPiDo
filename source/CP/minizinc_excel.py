@@ -91,12 +91,13 @@ MODEL_BASE_DIR = "C:\\Users\\xPica\\Documents\\CDMO_Proj_LiPiDo\\source\\CP"
 
 SOLVERS = ["gecode"]
 NS = [20]
-SEEDS = [777]
+SEEDS = [111, 222, 333, 444]
 TIME_LIMIT_MS = 300000
-OUTPUT_FILE = "model_comparison_777.xlsx"
+OUTPUT_FILE = f"model_comparison_{time.time()}.xlsx" # Output Excel file name
 MODELS = [
-    "C:\\Users\\xPica\\Documents\\CDMO_Proj_LiPiDo\\source\\CP\\model.mzn",
-#    "C:\\Users\\xPica\\Documents\\CDMO_Proj_LiPiDo\\source\\CP\\OCP.mzn",
+    "C:\\Users\\xPica\\Documents\\CDMO_Proj_LiPiDo\\source\\CP\\CP.mzn",
+    "C:\\Users\\xPica\\Documents\\CDMO_Proj_LiPiDo\\source\\CP\\CP_nog.mzn",
+#   "C:\\Users\\xPica\\Documents\\CDMO_Proj_LiPiDo\\source\\CP\\OCP.mzn",
 #   "C:\\Users\\xPica\\Documents\\CDMO_Proj_LiPiDo\\source\\CP\\noSB.mzn",
 #   "C:\\Users\\xPica\\Documents\\CDMO_Proj_LiPiDo\\source\\CP\\noIMP.mzn",
     ]
