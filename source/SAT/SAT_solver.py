@@ -144,9 +144,9 @@ def STS_SAT(n, time_limit=300, optimality=False, random_seed=False, verbose=Fals
             return results, time.time() - start_time
 
         # Compute the initial imbalance of the feasible solution
-        initial_imbalance, _ = calculate_imbalance(n, feasible_schedule, None, None)
+        initial_imbalance, _ = compute_imbalance(n, feasible_schedule, None, None)
         if verbose:
-            print(f"Initial imbalance (no swaps): {initial_imbalance}")
+            print(f"Initial imbalance (no swaps):\t{initial_imbalance}")
 
         # Binary search bounds
         lower_bound = 0
@@ -176,8 +176,9 @@ def STS_SAT(n, time_limit=300, optimality=False, random_seed=False, verbose=Fals
 
         while lower_bound <= upper_bound and time.time() - start_time < time_limit - 1:
             mid = (lower_bound + upper_bound) // 2
+
             if verbose:
-                print(f"Trying imbalance <= {mid} for every team")
+                print(f"Trying imbalance <= {mid} for every team\t(total imbalance <= {mid*n})")
 
             iteration_time = (time_limit - 1) - (time.time() - start_time)
 
@@ -250,10 +251,10 @@ def STS_SAT(n, time_limit=300, optimality=False, random_seed=False, verbose=Fals
 
             if opt_result == sat:
                 swap_model = opt_solver.model()
-                actual_imbalance, team_imbalances = calculate_imbalance(n, feasible_schedule, swap_model, swap)
-
+                actual_imbalance, team_imbalances = compute_imbalance(n, feasible_schedule, swap_model, swap)
+                
                 if verbose:
-                    print(f"Solution found with actual total imbalance {actual_imbalance}")
+                    print(f"Solution found with total imbalance =\t{actual_imbalance}")
 
                 if actual_imbalance <= best_imbalance:
                     best_solution = (schedule_model, feasible_schedule, swap_model, swap)
@@ -268,7 +269,7 @@ def STS_SAT(n, time_limit=300, optimality=False, random_seed=False, verbose=Fals
                 upper_bound = mid-1
             else:
                 if verbose:
-                    print(f"No solution with imbalance <= {mid} for every team")
+                    print(f"No solution with imbalance <= {mid} for every team\t(total imbalance <= {mid*n})")
                 lower_bound = mid + 1
 
         total_time = time.time() - start_time
@@ -332,7 +333,7 @@ def format_and_save_solution(n: int, result: tuple, runtime: float, time_limit: 
             sol_matrix[p][w] = [home, away]
 
         # 2. Calculate final metrics
-        total_imbalance, _ = calculate_imbalance(n, feasible_schedule, swap_model, swap)
+        total_imbalance, _ = compute_imbalance(n, feasible_schedule, swap_model, swap)
         
         # If timeout is reached without solving, time should be 300 and optimal false.
         is_optimal = runtime < time_limit

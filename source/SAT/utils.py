@@ -19,11 +19,14 @@ def build_inverse_tables(n):
     return T1, T2
 
 
-def calculate_imbalance(n, feasible_schedule, swap_model, swap):
+def compute_imbalance(n, feasible_schedule, swap_model, swap):
     T1, T2 = build_inverse_tables(n)
     
     total_imbalance = 0
     team_imbalances = []
+
+    ideal_low = (n-1) // 2  # W / 2 rounded up
+    ideal_high = (n) // 2   # W / 2 rounded down
     
     for t in range(1, n + 1):
         home_games = 0
@@ -38,10 +41,12 @@ def calculate_imbalance(n, feasible_schedule, swap_model, swap):
             if (T1[m] == t and not swap_val) or (T2[m] == t and swap_val):
                 home_games += 1
         
-        away_games = (n - 1) - home_games
-        imbalance = abs(2 * home_games - (n - 1)) - 1
-        if imbalance < 0:
-            imbalance = 0
+        imbalance = 0
+        if home_games < ideal_low:
+            imbalance = ideal_low - home_games
+        elif home_games > ideal_high:
+            imbalance = home_games - ideal_high
+
         total_imbalance += imbalance
         team_imbalances.append(imbalance)
     
