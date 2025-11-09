@@ -298,17 +298,21 @@ def STS_SAT(n, time_limit=300, optimality=False, random_seed=False, verbose=Fals
 
 
 
-def format_and_save_solution(n: int, result: tuple, runtime: float, time_limit: int, filepath: str):
+def format_and_save_solution(n: int, result: tuple, runtime: float, time_limit: int, filepath: str, optimality: bool):
     """
     Formats the SAT solver output and saves it to a JSON file.
     """
+
+
+    is_timeout = runtime >= time_limit
+    is_optimal = optimality and (not is_timeout)
+
     if result is None or result[0] is None:
-        is_timeout = runtime >= time_limit
 
         output_data = {
             "z3_sat_solver": {
                 "time": time_limit if is_timeout else math.floor(runtime),
-                "optimal": not is_timeout,  # True for UNSAT, False for TIMEOUT
+                "optimal": is_optimal,  # True for UNSAT (if we required optimality), False for TIMEOUT
                 "obj": None,
                 "sol": []
             }
@@ -336,9 +340,8 @@ def format_and_save_solution(n: int, result: tuple, runtime: float, time_limit: 
         total_imbalance, _ = compute_imbalance(n, feasible_schedule, swap_model, swap)
         
         # If timeout is reached without solving, time should be 300 and optimal false.
-        is_optimal = runtime < time_limit
         solve_time = math.floor(runtime)
-        if not is_optimal:
+        if is_timeout:
             solve_time = time_limit
 
         # 3. Construct the JSON output object
@@ -400,5 +403,6 @@ if __name__ == "__main__":
         result=result,
         runtime=runtime,
         time_limit=args.time_limit,
-        filepath=res_path
+        filepath=res_path,
+        optimality=args.optimality
     )

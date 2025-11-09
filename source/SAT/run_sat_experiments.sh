@@ -22,17 +22,19 @@ do
         
         # Run the Docker command. The output file is n.json in the container's res/SAT directory.
         # This will map to the local ./res/SAT/$n.json file.
-        docker-compose run --rm solve-SAT "$n" > /dev/null 2>&1
+        docker-compose run --rm --remove-orphans solve-SAT "$n" --random_seed
         
         # Wait a moment to ensure the file is fully written by the container.
         sleep 1
 
+        FILE_PATH="../../res/SAT/$n.json"
+
         # Check for the file.
-        if [ -f "./res/SAT/$n.json" ]; then
+        if [ -f "$FILE_PATH" ]; then
             # Move the file to the specific repetition directory.
-            mv "./res/SAT/$n.json" "$OUTPUT_DIR/run_$i.json"
+            mv "$FILE_PATH" "$OUTPUT_DIR/run_$i.json"
         else
-            echo "Error: Output file ./res/SAT/$n.json not found after run."
+            echo "Error: Output file $FILE_PATH not found after run."
             # Aggiungi qui un'istruzione per la gestione dell'errore, ad esempio saltando al prossimo n o uscendo.
             # break # Esempio: esce dal loop interno se il file non viene trovato
         fi
