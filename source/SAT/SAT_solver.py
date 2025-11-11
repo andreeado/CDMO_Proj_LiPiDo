@@ -145,7 +145,7 @@ def STS_SAT(n, time_limit=300, optimality=False, random_seed=False, verbose=Fals
 
         # Compute the initial imbalance of the feasible solution
         initial_imbalance, initial_team_imbalances = compute_imbalance(n, feasible_schedule, None, None)
-        best_max_imbalance = max(initial_team_imbalances.values()) if initial_team_imbalances else W
+        best_max_imbalance = max(initial_team_imbalances) if initial_team_imbalances else W
 
         if verbose:
             print(f"Initial imbalance (no swaps):\t{initial_imbalance}")
@@ -254,7 +254,7 @@ def STS_SAT(n, time_limit=300, optimality=False, random_seed=False, verbose=Fals
             if opt_result == sat:
                 swap_model = opt_solver.model()
                 actual_imbalance, team_imbalances = compute_imbalance(n, feasible_schedule, swap_model, swap)
-                actual_max_team_imbalance = max(team_imbalances.values()) if team_imbalances else 0
+                actual_max_team_imbalance = max(team_imbalances) if team_imbalances else 0
 
                 if verbose:
                     print(f"Solution found with total imbalance =\t{actual_imbalance}")
