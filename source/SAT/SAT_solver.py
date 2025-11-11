@@ -144,7 +144,9 @@ def STS_SAT(n, time_limit=300, optimality=False, random_seed=False, verbose=Fals
             return results, time.time() - start_time
 
         # Compute the initial imbalance of the feasible solution
-        initial_imbalance, _ = compute_imbalance(n, feasible_schedule, None, None)
+        initial_imbalance, initial_team_imbalances = compute_imbalance(n, feasible_schedule, None, None)
+        best_max_imbalance = max(initial_team_imbalances.values()) if initial_team_imbalances else W
+
         if verbose:
             print(f"Initial imbalance (no swaps):\t{initial_imbalance}")
 
@@ -252,14 +254,24 @@ def STS_SAT(n, time_limit=300, optimality=False, random_seed=False, verbose=Fals
             if opt_result == sat:
                 swap_model = opt_solver.model()
                 actual_imbalance, team_imbalances = compute_imbalance(n, feasible_schedule, swap_model, swap)
-                
+                actual_max_team_imbalance = max(team_imbalances.values()) if team_imbalances else 0
+
                 if verbose:
                     print(f"Solution found with total imbalance =\t{actual_imbalance}")
-
-                if actual_imbalance <= best_imbalance:
-                    best_solution = (schedule_model, feasible_schedule, swap_model, swap)
+                
+                # Give priority to min-max
+                if actual_max_team_imbalance < best_max_imbalance:
+                    best_max_imbalance = actual_max_team_imbalance
                     best_imbalance = actual_imbalance
-
+                    best_solution = (schedule_model, feasible_schedule, swap_model, swap)
+                
+                # If actual max is equal => save the solution with the best total imbalance
+                elif actual_max_team_imbalance == best_max_imbalance:
+                    if actual_imbalance < best_imbalance:
+                        best_imbalance = actual_imbalance
+                        best_solution = (schedule_model, feasible_schedule, swap_model, swap)
+                
+                # Goal = total imbalance = 0
                 if actual_imbalance == 0:
                     if verbose:
                         print("Optimal solution found!")
