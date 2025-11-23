@@ -2,6 +2,22 @@ import json
 import os
 from pulp import value
 
+def match_ID(i,j,n):
+    return ((i-1)*n+j)-(i*(i+1))//2
+
+
+def build_inverse_tables(n):
+    M = n * (n - 1) // 2
+    T1 = [0] * (M + 1)
+    T2 = [0] * (M + 1)
+
+    for i in range(1, n):
+        for j in range(i + 1, n + 1):
+            m = match_ID(i, j, n)
+            T1[m] = i
+            T2[m] = j
+
+    return T1, T2
 
 def create_solution_data(solver_name, schedule, obj, optimal, solve_time):
     """

@@ -6,7 +6,7 @@ shift
 
 case "$APPROACH" in
   MIP)
-    python source/MIP/mip_solver_s.py "$@"
+    python source/MIP/mip_solver_pulp.py "$@"
     ;;
   CP)
     python source/CP/minizinc_runner.py "$@"

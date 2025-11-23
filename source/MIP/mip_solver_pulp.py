@@ -8,8 +8,9 @@ from utils import *
 
 logger = logging.getLogger(__name__)
 
-def solve(solver_name, params, verbose): 
-    prob = LpProblem("STS", LpMinimize)
+def solve(solver_name, params, verbose, optimize=False): 
+    # PHASE 1: FEASIBILITY
+    prob = LpProblem("STS_Feasibility", LpMinimize)
     try:
         data = create_data(params['n_teams'])
         init_time = time.time()
@@ -36,13 +37,15 @@ def solve(solver_name, params, verbose):
     match prob.sol_status:
         # OPTIMAL SOLUTION FOUND
         case const.LpSolutionOptimal:
-            sol = extract_schedule(*results)
+            x, T1, T2, data, circle_schedule = results
+            sol = extract_schedule_from_matches(x, T1, T2, data, circle_schedule)
             obj = 0 if prob.objective.value() is None else round(prob.objective.value())
-            if solve_time<300:
+            if solve_time < 300:
                 opt = True
         # NOT OPTIMAL SOLUTION FOUND
         case const.LpSolutionIntegerFeasible:
-            sol = extract_schedule(*results)
+            x, T1, T2, data, circle_schedule = results
+            sol = extract_schedule_from_matches(x, T1, T2, data, circle_schedule)
             obj = 0 if prob.objective.value() is None else round(prob.objective.value())
             opt = False
             solve_time = int(params['timeout'])
@@ -58,13 +61,55 @@ def solve(solver_name, params, verbose):
             obj = "None"
             opt = False
             solve_time = int(params['timeout'])
-    return create_solution_data(solver_name, sol, obj, opt, solve_time)
+    
+    # PHASE 2: OPTIMIZATION (if requested and time permits)
+    if optimize and sol:
+        remaining_time = params['timeout'] - solve_time
+        
+        if remaining_time > 0:
+            logger.info(f"Feasibility found in {solve_time}s. Starting optimization with {remaining_time}s remaining...")
+            
+            # Create new optimization problem
+            opt_prob = LpProblem("STS_HomeAway_Optimization", LpMinimize)
+            
+            try:
+                swap_vars = set_optimization(opt_prob, sol, data)
+                
+                # Configure solver with remaining time
+                match solver_name:
+                    case 'cbc':
+                        opt_solver = PULP_CBC_CMD(msg=verbose, timeLimit=remaining_time, presolve=False, cuts=False, threads=1)
+                    case 'gurobi':
+                        opt_solver = GUROBI(msg=verbose, timeLimit=remaining_time, threads=1)
+                    case 'HiGHS':
+                        opt_solver = HiGHS(msg=verbose, timeLimit=math.ceil(remaining_time), threads=1)
+                    case _:
+                        raise KeyError('Unsupported solver')
+                
+                opt_prob.solve(opt_solver)
+                
+                # Process optimization results
+                if opt_prob.sol_status in [const.LpSolutionOptimal, const.LpSolutionIntegerFeasible]:
+                    # Apply swaps to the schedule
+                    sol = apply_swaps(sol, swap_vars, data)
+                    obj = 0 if opt_prob.objective.value() is None else round(opt_prob.objective.value())
+                    opt = (opt_prob.sol_status == const.LpSolutionOptimal)
+                    logger.info(f"Optimization completed. New objective: {obj}")
+                else:
+                    logger.info("Optimization did not improve solution, keeping feasible solution")
+                    
+            except Exception as e:
+                logger.warning(f"Optimization phase failed: {e}. Returning feasible solution.")
+        else:
+            logger.info("No time remaining for optimization phase.")
+    
+    total_time = math.floor(time.time() - init_time)
+    return create_solution_data(solver_name, sol, obj, opt, total_time)
 
 
 def generate_circle_schedule(n_teams):
         """
         Generate initial opponent schedule using circle method
-        Returns: Dictionary mapping (week, team1, team2) -> True for games
         """
         schedule = {}
         # Create teams list: 0 to n-2 in circle, team n-1 fixed
@@ -76,18 +121,18 @@ def generate_circle_schedule(n_teams):
             
             # Fixed team always plays against team at position 0
             opponent = teams[0]
-            week_games.append((fixed_team, opponent))
+            match_id = match_ID(min(fixed_team+1, opponent+1), max(fixed_team+1, opponent+1), n_teams)
+            week_games.append(match_id)
             
             # Pair remaining teams
             for i in range(1, (n_teams-1)//2 + 1):
                 team1 = teams[i]
                 team2 = teams[-(i)]
-                week_games.append((team1, team2))
-            
+                t1, t2 = team1 + 1, team2 + 1
+                match_id = match_ID(min(t1, t2), max(t1, t2), n_teams)
+                week_games.append(match_id)            
             # Store games for this week
-            for game in week_games:
-                t1, t2 = game
-                schedule[(week, min(t1, t2), max(t1, t2))] = True
+            schedule[week] = week_games
             
             # Rotate teams (first team goes to end, others shift left)
             teams = teams[1:] + [teams[0]] 
@@ -98,26 +143,20 @@ def set_constraints_circle(problem, schedule, data):
     n_weeks = data['n_weeks']
     n_periods = data['n_periods']
     Teams = data['teams']
-    Weeks = data['weeks']
     Periods = data['periods']
-    lower_bound = 1
-    upper_bound = n_teams - 1 
 
-    # convert circle schedule to week-based format
-    circle_schedule_weeks = {}
-    for (w, t1, t2) in schedule.keys():
-        if w not in circle_schedule_weeks:
-            circle_schedule_weeks[w] = []
-        circle_schedule_weeks[w].append((t1, t2))
+    # Total number of matches
+    M = n_teams * (n_teams - 1) // 2
+    
+    # Build inverse tables for match lookup
+    T1, T2 = build_inverse_tables(n_teams)
 
     # --------- DECISION VARIABLES ---------
-    # x[i,j,k,p] = 1 if team i plays at home against team j in week k, period p
+    # x[m,p] = 1 if match m is played in period p
     x = {}
-    for i in Teams:
-        for j in Teams:
-            for k in Weeks:
-                for p in Periods:
-                    x[i, j, k, p] = LpVariable(f"x_{i}_{j}_{k}_{p}", cat='Binary')
+    for m in range(1, M + 1):
+        for p in range(n_periods):
+            x[m, p] = LpVariable(f"match_period_{m}_{p}", cat='Binary')
     
     # auxiliary variables for defective periods. 
     # defective[t,p] = 1 iff team t appears exactly once in period p
@@ -126,86 +165,189 @@ def set_constraints_circle(problem, schedule, data):
         for p in Periods:
             defective[t, p] = LpVariable(f"defective_{t}_{p}", cat='Binary')
 
-    # auxiliary variables for balance constraints
-    # variable to track maximum imbalance
-    max_imbalance = LpVariable(name='max_imbalance', lowBound=lower_bound, upBound=upper_bound, cat='Integer')
-    
-    # positive and negative balance variables
-    balance_pos = {}
-    balance_neg = {}
-    for t in Teams:
-        balance_pos[t] = LpVariable(f"balance_pos_{t}", lowBound=0)
-        balance_neg[t] = LpVariable(f"balance_neg_{t}", lowBound=0)
-
     # --------- OBJECTIVE FUNCTION ---------
-    # problem += 0, minimize zero (feasibility problem)
-    # optimization version
-    for t in Teams:
-        # each team's imbalance must be <= max_imbalance
-        problem += balance_pos[t] + balance_neg[t] <= max_imbalance
-
-    # Minimize the maximum imbalance
-    problem += max_imbalance
+    problem += 0 #minimize zero (feasibility problem)
 
     # --------- CONSTRAINTS ---------
-    # Constraint 1: Each match from circle schedule must be assigned to exactly one period
-    for w in range(n_weeks):
-        matches_in_week = circle_schedule_weeks[w]
-        for t1, t2 in matches_in_week:
-            problem += lpSum([x[t1, t2, w, p] + x[t2, t1, w, p] for p in Periods]) == 1
+    # Constraint 1: Each match must be assigned to exactly one period
+    for m in range(1, M + 1):
+        problem += lpSum([x[m, p] for p in range(n_periods)]) == 1
     
     # Constraint 2: Each period must contain exactly one match from each week
     for w in range(n_weeks):
         for p in range(n_periods):
-            matches_in_week = circle_schedule_weeks[w]
-            problem += lpSum([x[t1, t2, w, p] + x[t2, t1, w, p] for t1, t2 in matches_in_week]) == 1
-
+            matches_in_week = schedule[w]
+            problem += lpSum([x[m, p] for m in matches_in_week]) == 1
+    
     # Constraint 3: Each team plays at most 2 matches in the same period
     for p in range(n_periods):
-        for t in range(n_teams):
-            team_appearances = []
-            for w in range(n_weeks):
-                matches_in_week = circle_schedule_weeks[w]
-                for t1, t2 in matches_in_week:
-                    if t1 == t or t2 == t:
-                        team_appearances.append(x[t1, t2, w, p] + x[t2, t1, w, p])
-            problem += lpSum(team_appearances) <= 2
-        
-    # Constraint 4: Prevent any games not in circle schedule from being played
-    for w in range(n_weeks):
-        week_games = set((min(t1,t2), max(t1,t2)) for t1, t2 in circle_schedule_weeks[w])
-        
-        for t1 in range(n_teams):
-            for t2 in range(t1 + 1, n_teams):
-                if (t1, t2) not in week_games:
-                    problem += lpSum([x[t1, t2, w, p] + x[t2, t1, w, p] for p in Periods]) == 0
+        for t in Teams:
+            # Find all matches involving team t (t is 0-indexed, but T1/T2 are 1-indexed)
+            team_matches = []
+            for m in range(1, M + 1):
+                if T1[m] == t+1 or T2[m] == t+1:
+                    team_matches.append(x[m, p])
+            problem += lpSum(team_matches) <= 2
     
-    # Constraint 5: Each team has exactly one defective period (appears exactly once)
-    for t in range(n_teams):
+    # Constraint 4: Each team has exactly one defective period (appears exactly once)
+    for t in Teams:
         # Each team has exactly one defective period
-        problem += lpSum([defective[t, p] for p in Periods]) == 1
+        problem += lpSum([defective[t, p] for p in range(n_periods)]) == 1
         
         # Link defective variable to team appearances
         for p in range(n_periods):
-            team_appearances = []
-            for w in range(n_weeks):
-                matches_in_week = circle_schedule_weeks[w]
-                for t1, t2 in matches_in_week:
-                    if t1 == t or t2 == t:
-                        team_appearances.append(x[t1, t2, w, p] + x[t2, t1, w, p])
-            # lower bound
-            problem += lpSum(team_appearances) >= defective[t, p]
-            # upper bound
-            problem += lpSum(team_appearances) <= 1 + (1 - defective[t, p]) * n_weeks
+            # Find all matches involving team t (t is 0-indexed, but T1/T2 are 1-indexed)
+            team_matches = []
+            for m in range(1, M + 1):
+                if T1[m] == t+1 or T2[m] == t+1:
+                    team_matches.append(x[m, p])
+            team_appearances = lpSum(team_matches)
+            
+            # Lower bound: if defective, must appear at least once
+            problem += team_appearances >= defective[t, p]
+            
+            # Upper bound: if defective, appear exactly once; otherwise at most 2
+            problem += team_appearances <= 1 + (1 - defective[t, p]) * 1
+
+    return x, T1, T2, data, schedule
+
+def set_optimization(problem, feasible_schedule, data):
+    n_teams = data['n_teams']
+    n_weeks = data['n_weeks']
+    n_periods = data['n_periods']
+    Teams = data['teams']
+    Periods = data['periods']
+    lower_bound = 1
+    upper_bound = n_teams - 1
+
+    # --------- DECISION VARIABLES ---------
+    # swap[p,w] = 1 if we swap home/away for the match in period p, week w
+    swap = {}
+    for p in Periods:
+        for w in range(n_weeks):
+            if feasible_schedule[p][w]:  # Only for non-empty slots
+                swap[p, w] = LpVariable(f"swap_{p}_{w}", cat='Binary')
     
-    # Constraint 6: Bound variables to home-away games balance
+    # Auxiliary variables for balance optimization
+    max_imbalance = LpVariable(name='max_imbalance', lowBound=lower_bound, upBound=upper_bound, cat='Integer')
+    balance_pos = {}
+    balance_neg = {}
     for t in Teams:
-        home_expr = lpSum([x[t, j, w, p] for j in Teams if j != t for w in Weeks for p in Periods])
-        away_expr = lpSum([x[j, t, w, p] for j in Teams if j != t for w in Weeks for p in Periods])
-        problem += (home_expr - away_expr == balance_pos[t] - balance_neg[t])
+        balance_pos[t] = LpVariable(f"balance_pos_{t}", lowBound=0, cat='Integer')
+        balance_neg[t] = LpVariable(f"balance_neg_{t}", lowBound=0, cat='Integer')
+    
+    # --------- OBJECTIVE FUNCTION ---------
+    # Minimize maximum home-away imbalance
+    problem += max_imbalance
+    
+    # --------- CONSTRAINTS ---------
+    # Calculate home and away games for each team
+    for t in Teams:
+        team_id = t + 1  # Convert to 1-indexed
+        home_games = []
+        away_games = []
+        
+        for p in Periods:
+            for w in range(n_weeks):
+                if not feasible_schedule[p][w]:
+                    continue
+                    
+                home_team, away_team = feasible_schedule[p][w]
+                
+                if home_team == team_id:
+                    # Originally home: home if not swapped, away if swapped
+                    home_games.append(1 - swap[p, w])
+                    away_games.append(swap[p, w])
+                elif away_team == team_id:
+                    # Originally away: away if not swapped, home if swapped
+                    away_games.append(1 - swap[p, w])
+                    home_games.append(swap[p, w])
+        
+        # Balance constraint: home_count - away_count = balance_pos - balance_neg
+        home_count = lpSum(home_games) if home_games else 0
+        away_count = lpSum(away_games) if away_games else 0
+        problem += home_count - away_count == balance_pos[t] - balance_neg[t]
+        
+        # Link to max imbalance
+        problem += balance_pos[t] + balance_neg[t] <= max_imbalance
+    # SYMMETRY BREAKING: first period no swaps
+    for w in range(n_weeks):
+        if (0, w) in swap:
+            problem += swap[0, w] == 0
 
-    return x, data
+    return swap
 
+def apply_swaps(schedule, swap_vars, data):
+    """
+    Apply home/away swaps to the schedule based on swap variable values.
+    
+    Returns:
+        Updated schedule with swaps applied
+    """
+    n_periods = data['n_periods']
+    n_weeks = data['n_weeks']
+    
+    # Create a copy of the schedule to modify
+    new_schedule = []
+    for p in range(n_periods):
+        period_schedule = []
+        for w in range(n_weeks):
+            if schedule[p][w]:
+                period_schedule.append(schedule[p][w][:])  # Copy the match
+            else:
+                period_schedule.append([])
+        new_schedule.append(period_schedule)
+    
+    # Apply swaps
+    for (p, w), swap_var in swap_vars.items():
+        if swap_var.varValue and swap_var.varValue > 0.5:  # Swap is active
+            if new_schedule[p][w]:
+                # Swap home and away teams
+                home, away = new_schedule[p][w]
+                new_schedule[p][w] = [away, home]
+    
+    return new_schedule
+
+def extract_schedule_from_matches(match_period, T1, T2, data, circle_schedule):
+    """
+    Extract schedule from match_period variables
+    Returns schedule in format: [period][week] = [team1, team2]
+    where team numbers are 1-indexed
+    """
+    n_teams = data['n_teams']
+    n_weeks = data['n_weeks']
+    n_periods = data['n_periods']
+    M = n_teams * (n_teams - 1) // 2
+    
+    # Initialize schedule structure: schedule[period][week] = [home, away]
+    schedule = []
+    for p in range(n_periods):
+        period_schedule = []
+        for w in range(n_weeks):
+            period_schedule.append([])
+        schedule.append(period_schedule)
+    
+    # Create reverse mapping: match_id -> week
+    match_to_week = {}
+    for week, match_list in circle_schedule.items():
+        for match_id in match_list:
+            match_to_week[match_id] = week
+    
+    # Extract assignments from decision variables
+    for m in range(1, M + 1):
+        for p in range(n_periods):
+            if match_period[m, p].varValue and match_period[m, p].varValue > 0.5:
+                # Find which week this match belongs to
+                if m in match_to_week:
+                    w = match_to_week[m]
+                    # Get teams for this match (already 1-indexed from T1, T2)
+                    team1 = T1[m]
+                    team2 = T2[m]
+                    # Store as [home, away] - using team1 as home by default
+                    schedule[p][w] = [team1, team2]
+                break
+    
+    return schedule
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, 
@@ -218,6 +360,10 @@ if __name__ == "__main__":
                         choices=["cbc", "gurobi", "HiGHS"],
                         help="Solver name (default: cbc)")
     
+    # add optimization flag
+    parser.add_argument("--optimize", action='store_true',
+                        help="Enable optimization phase after feasibility (default: False)")
+    
     args = parser.parse_args()
     if args.n_teams % 2 != 0:
         raise ValueError("Number of teams must be an even integer")
@@ -226,8 +372,8 @@ if __name__ == "__main__":
     n_teams = args.n_teams
     params = {'timeout': 300,
               'n_teams': n_teams}
-    verbose = 1  # Solver verbosity
-    result_data = solve(args.solver_name, params, verbose)
+    verbose = 0  # Solver verbosity
+    result_data = solve(args.solver_name, params, verbose, optimize=args.optimize)
     
     # Extract values from the result dictionary
     solver_result = result_data[args.solver_name]
