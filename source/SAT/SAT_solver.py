@@ -14,7 +14,7 @@ at_most_k = at_most_k_seq
 at_least_k = at_least_k_seq
 
 
-def STS_SAT(n, time_limit=300, optimality=False, random_seed=False, verbose=False):
+def STS_SAT(n, time_limit=300, optimality=False, seed=42, verbose=False):
     start_time = time.time()
     
     W = n - 1
@@ -25,7 +25,7 @@ def STS_SAT(n, time_limit=300, optimality=False, random_seed=False, verbose=Fals
         print(f"Solving for {n} teams ===")
         print(f"Teams: {n}, Weeks: {W}, Periods: {P}, Matches: {M}")
         print(f"Time limit: {time_limit}s")
-        print(f"Random seed: {random_seed}")
+        print(f"Seed: {seed}")
 
         # PHASE 1: Find a feasible schedule
         print("\n=== PHASE 1: Finding feasible schedule ===")
@@ -40,8 +40,8 @@ def STS_SAT(n, time_limit=300, optimality=False, random_seed=False, verbose=Fals
     
     s = Solver()
     s.set("timeout", time_limit * 1000) # set time_limite (in milliseconds)
-    if random_seed:
-        s.set("random_seed", int(time.time()))
+    if seed:
+        s.set("random_seed", seed)
 
     # Variable
     # match_period[m][p] is True if match m is in period p
@@ -187,8 +187,8 @@ def STS_SAT(n, time_limit=300, optimality=False, random_seed=False, verbose=Fals
             opt_solver = Solver()
             opt_solver.set("timeout", int(iteration_time * 1000)) # set time_limite (in milliseconds)
 
-            if random_seed:
-                opt_solver.set("random_seed", int(time.time()))
+            if seed:
+                opt_solver.set("random_seed", seed)
 
             for t in range(1, n + 1):
                 # Create the imbalance bits directly from home_count
@@ -392,7 +392,7 @@ if __name__ == "__main__":
     parser.add_argument("n_teams", type=int, help="Number of teams (must be even)")
     parser.add_argument("--time_limit", type=int, default=300, help="Time limit in seconds for the solver")
     parser.add_argument("--optimality", action='store_true', help="Search for the optimal solution (default: False)")
-    parser.add_argument("--random_seed", action='store_true', help="Set a random seed for the solver (default: False)")
+    parser.add_argument("--seed", type=int, default=42, help="Set a seed for the solver (default: 42)")
     parser.add_argument("--verbose", action='store_true', help="Receive feedback from the solver (default: False)")
 
     args = parser.parse_args()
@@ -401,7 +401,7 @@ if __name__ == "__main__":
         raise ValueError("Number of teams must be an even number.")
 
     # Run the solver
-    result, runtime = STS_SAT(args.n_teams, args.time_limit, args.optimality, args.random_seed, args.verbose)
+    result, runtime = STS_SAT(args.n_teams, args.time_limit, args.optimality, args.seed, args.verbose)
 
     
     # Check if the path exists in Docker env
