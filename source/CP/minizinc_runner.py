@@ -24,7 +24,7 @@ else:
 
 TIME_LIMIT_MS = 300000  # 5 minutes
 
-def run_minizinc(n, solver, seed=777, time_limit=TIME_LIMIT_MS):
+def run_minizinc(n, solver, seed=55, time_limit=TIME_LIMIT_MS):
     cmd = [
         MINIZINC_PATH,
         MODEL_FILE,

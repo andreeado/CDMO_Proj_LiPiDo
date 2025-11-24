@@ -75,6 +75,9 @@ def run_minizinc(n, solver, seed=777, time_limit=300000, model_file=None):
             'sol': None,
             'feasible': False
         }
+    
+def get_output_file():
+    return f"model_comparison_{time.time()}.xlsx"
 
 # ============================================================================
 # CONFIGURATION SECTION - Modify these variables as needed
@@ -91,12 +94,14 @@ MODEL_BASE_DIR = "C:\\Users\\xPica\\Documents\\CDMO_Proj_LiPiDo\\source\\CP"
 
 SOLVERS = ["gecode"]
 NS = [20]
-SEEDS = [111, 222, 333, 444]
+SEEDS = [00, 33, 55]
 TIME_LIMIT_MS = 300000
-OUTPUT_FILE = f"model_comparison_{time.time()}.xlsx" # Output Excel file name
+OUTPUT_FILE = get_output_file() # Output Excel file name
 MODELS = [
-    "C:\\Users\\xPica\\Documents\\CDMO_Proj_LiPiDo\\source\\CP\\CP.mzn",
-    "C:\\Users\\xPica\\Documents\\CDMO_Proj_LiPiDo\\source\\CP\\CP_nog.mzn",
+    "C:\\Users\\xPica\\Documents\\CDMO_Proj_LiPiDo\\source\\CP\\ZZZ\\base.mzn",
+    "C:\\Users\\xPica\\Documents\\CDMO_Proj_LiPiDo\\source\\CP\\ZZZ\\glob.mzn",
+    "C:\\Users\\xPica\\Documents\\CDMO_Proj_LiPiDo\\source\\CP\\ZZZ\\def.mzn",
+    "C:\\Users\\xPica\\Documents\\CDMO_Proj_LiPiDo\\source\\CP\\ZZZ\\glob+def.mzn",
 #   "C:\\Users\\xPica\\Documents\\CDMO_Proj_LiPiDo\\source\\CP\\OCP.mzn",
 #   "C:\\Users\\xPica\\Documents\\CDMO_Proj_LiPiDo\\source\\CP\\noSB.mzn",
 #   "C:\\Users\\xPica\\Documents\\CDMO_Proj_LiPiDo\\source\\CP\\noIMP.mzn",

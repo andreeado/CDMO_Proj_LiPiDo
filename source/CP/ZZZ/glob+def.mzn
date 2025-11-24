@@ -8,6 +8,10 @@ set of int: Matches = 1..nMatches; % Set of match indices
 
 include "alldifferent.mzn";
 
+% Match table
+array[Matches] of int: table_t1 = [t1 | t1 in Teams, t2 in Teams where t1 < t2]; % For each match, first team (home by default)
+array[Matches] of int: table_t2 = [t2 | t1 in Teams, t2 in Teams where t1 < t2]; % For each match, second team (away by default)
+
 int: nWeeks = n - 1; % Number of weeks in the tournament
 int: nPeriods = n div 2; % Number of periods per week
 
@@ -23,10 +27,6 @@ array[Periods, Weeks] of var Teams: x; % For each period and week, first team in
 array[Periods, Weeks] of var Teams: y; % For each period and week, second team in the match
 
 % = Constraints =
-
-% Match table
-array[Matches] of int: table_t1 = [t1 | t1 in Teams, t2 in Teams where t1 < t2]; % For each match, first team (home by default)
-array[Matches] of int: table_t2 = [t2 | t1 in Teams, t2 in Teams where t1 < t2]; % For each match, second team (away by default)
 
 % Channeling Constraints Between implementations
 constraint forall(w in Weeks, p in Periods) (
@@ -64,7 +64,7 @@ constraint forall(p in Periods) (
 
 % = Implied Constraints =
 
-  % Supporting array: defective period for each team
+% Supporting array: defective period for each team
 array[Teams] of var Periods: defective;
 
 % Each period must be defective for exactly two teams
@@ -76,6 +76,7 @@ constraint forall(t in Teams) (
       count([x[p, w] | w in Weeks] ++ [y[p, w] | w in Weeks], t) = 1
   );
 
+
 % = Symmetry breaking =
 
 % Well ordering of rows by fixing first week schedule (according to the circle method)
@@ -86,10 +87,10 @@ constraint
 
 % === Solve Phase (COP objective only) ===
 
-% solve minimize sum(imbalance);
+% solve minimize sum(imbalance);s
 
-solve :: int_search(match_vars, first_fail, indomain_random)
-  satisfy;
+solve :: int_search(match_vars, first_fail, indomain_random) satisfy;
+
 
 % === Output ===
 
@@ -100,4 +101,4 @@ output ["[\n"] ++ [
   | w in Weeks ]) ++ "]" ++
   if p != nPeriods then ",\n" else "\n" endif
 | p in Periods
-] ++ ["]\n"]; % Output the schedule as a list of home-away pairs for each period and week
+] ++ ["]\n"];

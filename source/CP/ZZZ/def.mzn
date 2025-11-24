@@ -4,36 +4,13 @@ int: nMatches = (n - 1) * n div 2; % Total number of matches in tournament
 set of int: Teams = 1..n; % Set of team indices
 set of int: Matches = 1..nMatches; % Set of match indices
 
-% === COP Only: home-away balancing ===
+% === CP: Sports Tournament Scheduling Problem ===
+
+include "alldifferent.mzn";
 
 % Match table
 array[Matches] of int: table_t1 = [t1 | t1 in Teams, t2 in Teams where t1 < t2]; % For each match, first team (home by default)
 array[Matches] of int: table_t2 = [t2 | t1 in Teams, t2 in Teams where t1 < t2]; % For each match, second team (away by default)
-
-% Decision variable: whether to swap team order in each match
-array[Matches] of var bool: swap; % For each match, 0 means no swap (t1 is home), 1 means swap (t2 is home)
-
-% Count how many times each team is home/away
-set of int: stepped = { i | i in 1..n-1 where i mod 2 = 1 };
-array[Teams] of var stepped: imbalance; % For each team, imbalance in home/away games
-
-  
-% For each team, calculate imbalance: abs(2 * home_count - (n - 1)) - 1
-constraint forall(t in Teams) (
-  let {
-    % Count how many times team t is home, based on swap direction
-    var int: home_count = sum(m in Matches) (
-      (table_t1[m] == t) * (1 - swap[m]) +
-      (table_t2[m] == t) * swap[m]
-    )
-  } in
-    % Compute the imbalance as deviation from ideal home/away split
-    imbalance[t] = abs(2 * home_count - (n - 1))
-);
-
-% === CP: Sports Tournament Scheduling Problem ===
-
-include "alldifferent.mzn";
 
 int: nWeeks = n - 1; % Number of weeks in the tournament
 int: nPeriods = n div 2; % Number of periods per week
@@ -75,13 +52,12 @@ constraint forall(p in Periods, w in Weeks) (
   week_of_match[match_vars[p, w]] = w
 );
 
-% For each period and team, bound the times the team appears in that period across all weeks
+% For each period and team, count the times the team appears in that period across all weeks
 constraint forall(p in Periods) (
-  global_cardinality_low_up(
-    [x[p, w] | w in Weeks] ++ [y[p, w] | w in Weeks],
-    Teams,
-    [1 | t in Teams],   % lower bounds (each team at least once)
-    [2 | t in Teams]    % upper bounds (each team at most twice)
+  forall(t in Teams) (
+    let {
+      var int: count = sum([bool2int(x[p, w] = t) + bool2int(y[p, w] = t) | w in Weeks])
+    } in count in 1..2 % Each team appears in each period 1 or 2 times
   )
 );
 
@@ -99,6 +75,14 @@ constraint forall(t in Teams) (
       count([x[p, w] | w in Weeks] ++ [y[p, w] | w in Weeks], t) = 1
   );
 
+% Each team has exactly one "defective" period (plays only once in that period)
+constraint forall(t in Teams) (
+  sum(p in Periods) (
+    bool2int(sum(w in Weeks) (bool2int(x[p,w] = t) + bool2int(y[p,w] = t)) = 1)
+  ) = 1
+);
+
+
 % = Symmetry breaking =
 
 % Well ordering of rows by fixing first week schedule (according to the circle method)
@@ -107,31 +91,13 @@ constraint
     match_vars[p, 1] = match_ID(p, n+1-p)
   );
 
-% Fixing the first boolean value WLOG
-constraint swap[1]=0;
-
 % === Solve Phase (COP objective only) ===
 
-% solve minimize sum(imbalance);
+% solve minimize sum(imbalance);s
 
-solve :: seq_search([
-    int_search(match_vars, first_fail, indomain_random),
-    bool_search(swap, input_order, indomain_random, complete)
-]) minimize max(imbalance);
+solve :: int_search(match_vars, first_fail, indomain_random) satisfy;
+
 
 % === Output ===
 
-output ["[\n"] ++ [
-  "  [" ++
-  join(", ", [
-    let {
-      var int: m = match_vars[p, w], % Match ID for period p, week w
-      var int: home = if swap[m] = 0 then x[p, w] else y[p, w] endif, % Home team after swap
-      var int: away = if swap[m] = 0 then y[p, w] else x[p, w] endif % Away team after swap
-    } in " [" ++ show(home) ++ ", " ++ show(away) ++ "]"
-  | w in Weeks ]) ++ "]" ++
-  if p != nPeriods then ",\n" else "\n" endif
-| p in Periods
-] ++ ["]\n"] ++ [
- "Objective function: " ++ show(max(imbalance)) ++ "\n",
-]; % Output the schedule as a list of home-away pairs for each period and week
+output [ show(x) ++ show(y) ++ show(match_vars)];
