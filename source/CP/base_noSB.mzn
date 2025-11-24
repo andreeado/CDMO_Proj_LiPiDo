@@ -54,11 +54,10 @@ constraint forall(p in Periods, w in Weeks) (
 
 % For each period and team, bound the times the team appears in that period across all weeks
 constraint forall(p in Periods) (
-  global_cardinality_low_up(
-    [x[p, w] | w in Weeks] ++ [y[p, w] | w in Weeks],
-    Teams,
-    [1 | t in Teams],   % lower bounds (each team at least once)
-    [2 | t in Teams]    % upper bounds (each team at most twice)
+  forall(t in Teams) (
+    let {
+      var int: count = sum([bool2int(x[p, w] = t) + bool2int(y[p, w] = t) | w in Weeks])
+    } in count in 1..2 % Each team appears in each period 1 or 2 times
   )
 );
 
@@ -72,27 +71,13 @@ constraint forall(t in Teams) (
   ) = 1
 );
 
-
-% = Symmetry breaking =
-
-% Well ordering of rows by fixing first week schedule (according to the circle method)
-constraint
-  forall(p in Periods) (
-    match_vars[p, 1] = match_ID(p, n+1-p)
-  );
-
 % === Solve Phase (COP objective only) ===
+
+% solve minimize sum(imbalance);s
 
 solve :: int_search(match_vars, first_fail, indomain_random) satisfy;
 
 
 % === Output ===
 
-output ["[\n"] ++ [
-  "[\n[" ++
-  join(", ",
- [" [" ++ show(x[p, w]) ++ ", " ++ show(y[p, w]) ++ "]"
-  | w in Weeks ]) ++ "]" ++
-  if p != nPeriods then ",\n" else "\n" endif
-| p in Periods
-] ++ ["]\n"];
+output [ show(x) ++ show(y) ++ show(match_vars)];

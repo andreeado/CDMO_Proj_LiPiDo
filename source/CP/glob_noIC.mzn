@@ -62,20 +62,6 @@ constraint forall(p in Periods) (
   )
 );
 
-% = Implied Constraints =
-
-% Supporting array: defective period for each team
-array[Teams] of var Periods: defective;
-
-% Each period must be defective for exactly two teams
-constraint global_cardinality(defective, [p | p in Periods], [2 | p in Periods]);
-
-% For each team, in its defective period, it appears only once (as x or y across all weeks)
-constraint forall(t in Teams) (
-    let { var Periods: p = defective[t] } in
-      count([x[p, w] | w in Weeks] ++ [y[p, w] | w in Weeks], t) = 1
-  );
-
 
 % = Symmetry breaking =
 
@@ -87,18 +73,9 @@ constraint
 
 % === Solve Phase (COP objective only) ===
 
-% solve minimize sum(imbalance);s
-
 solve :: int_search(match_vars, first_fail, indomain_random) satisfy;
 
 
 % === Output ===
 
-output ["[\n"] ++ [
-  "[\n[" ++
-  join(", ",
- [" [" ++ show(x[p, w]) ++ ", " ++ show(y[p, w]) ++ "]"
-  | w in Weeks ]) ++ "]" ++
-  if p != nPeriods then ",\n" else "\n" endif
-| p in Periods
-] ++ ["]\n"];
+output [ show(x) ++ show(y) ++ show(match_vars)];

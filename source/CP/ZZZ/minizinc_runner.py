@@ -14,8 +14,12 @@ if os.path.exists("/app/res"):
     SWAP_MODEL_FILE = "/app/source/CP/swap_model.mzn"
 else:
     MINIZINC_PATH = "C:\\Users\\xPica\\AppData\\Local\\Programs\\MiniZinc\\minizinc.exe"
-    MATCH_MODEL_FILE = "C:\\Users\\xPica\\Documents\\CDMO_Proj_LiPiDo\\source\\CP\\ZZZ\\def.mzn"
-    SWAP_MODEL_FILE  = "C:\\Users\\xPica\\Documents\\CDMO_Proj_LiPiDo\\source\\CP\\ZZZ\\OPT.mzn"
+    MATCH_MODEL_FILE = ["C:\\Users\\xPica\\Documents\\CDMO_Proj_LiPiDo\\source\\CP\\glob.mzn",
+                        "C:\\Users\\xPica\\Documents\\CDMO_Proj_LiPiDo\\source\\CP\\base.mzn",
+                        "C:\\Users\\xPica\\Documents\\CDMO_Proj_LiPiDo\\source\\CP\\base_noIC.mzn",
+                        "C:\\Users\\xPica\\Documents\\CDMO_Proj_LiPiDo\\source\\CP\\glob_noIC.mzn"]
+
+    SWAP_MODEL_FILE  = "C:\\Users\\xPica\\Documents\\CDMO_Proj_LiPiDo\\source\\CP\\OPT.mzn"
 
 TIME_LIMIT_MS = 300000  # 5 min
 
@@ -169,40 +173,49 @@ def main():
 
     # Run MiniZinc models
 
-    match_result = run_minizinc(MATCH_MODEL_FILE, args.n, args.solver, args.seed, swap=False)
+
 
     swap_result = run_minizinc(SWAP_MODEL_FILE,  args.n, args.solver, args.seed, swap=True)
 
     if swap_result["sol"] is None:
         swap_result["sol"] = [0] * (args.n//2 * (args.n - 1))
 
-    if match_result["sol"] is None:
-        schedule = []
-        swap_result["optimal"] = "false"
-        swap_result["obj"] = "null"
-    else:
-        x,y,match_vars =match_result["sol"]
-        schedule = build_schedule(
-            x=x,
-            y=y,
-            match_vars=match_vars,
-            swap=swap_result["sol"]
-        )
+    output_payload = {}
 
-    time = int(match_result["time"] + swap_result["time"])
-    if time > TIME_LIMIT_MS / 1000:
-        time = 300  # timeout fallback
-        swap_result["optimal"] = "false"
+    for model in MATCH_MODEL_FILE:
+        match_result = run_minizinc(model,  args.n, args.solver, args.seed, swap=False)
 
-    final_data = {
-        "time": int(match_result["time"] + swap_result["time"]),
-        "optimal": swap_result["optimal"],
-        "obj": swap_result["obj"],
-        "sol": schedule,
-  }
+        # extract model name: everything after last \\ and before .mzn
+        model_name = os.path.splitext(os.path.basename(model))[0]
+
+        if match_result["sol"] is None:
+            schedule = []
+            swap_result["optimal"] = "false"
+            swap_result["obj"] = "null"
+        else:
+            x, y, match_vars = match_result["sol"]
+            schedule = build_schedule(
+                x=x,
+                y=y,
+                match_vars=match_vars,
+                swap=swap_result["sol"]
+            )
+
+        time = int(match_result["time"] + swap_result["time"])
+        if time > TIME_LIMIT_MS / 1000:
+            time = 300  # timeout fallback
+            swap_result["optimal"] = "false"
+
+        final_data = {
+            "time": int(match_result["time"] + swap_result["time"]),
+            "optimal": swap_result["optimal"],
+            "obj": swap_result["obj"],
+            "sol": schedule,
+        }
+        output_payload[f"{args.solver}_{model_name}"] = final_data
 
     # Save JSON nested under the solver key
-    output_payload = {args.solver: final_data}
+
     with open(output_file, "w") as f:
         json.dump(output_payload, f, indent=4)
     print(f"Saved {output_file}")
