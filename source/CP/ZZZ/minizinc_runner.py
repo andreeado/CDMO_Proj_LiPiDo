@@ -5,6 +5,7 @@ import argparse
 import time
 from math import floor
 import os
+import numpy as np
 
 # Detect MiniZinc path
 if os.path.exists("/app/res"):
@@ -65,23 +66,27 @@ def run_minizinc(model_file, n, solver, seed, time_limit=TIME_LIMIT_MS, swap=Tru
     if swap:
         sol = next(
             (eval(m.group(0)
-                  .replace("true", "True")
-                  .replace("false", "False"))
+                  .replace("true", "1")
+                  .replace("false", "0"))
              for m in [re.search(r'\[[^\]]*\]', output_text, re.S)]
              if m),
             None
         )
 
     else:
-        # Pattern to capture two arrays
-        pattern = r'%%%mzn-stat-end\s*(\[[^\]]+\])\s*(\[[^\]]+\])'
+        # First capture everything between %%%mzn-stat-end and ----------
+        pattern = r'%%%mzn-stat-end\s*(.*?)\s*----------'
 
         match = re.search(pattern, output_text, re.DOTALL)
         if match:
-            x = eval(re.sub(r'\s+', '', match.group(1)))
-            y = eval(re.sub(r'\s+', '', match.group(2)))
-            match_vars = eval(re.sub(r'\s+', '', match.group(3)))
-            sol = x,y,match_vars
+            # Extract all arrays from the captured content
+            arrays_text = match.group(1)
+            arrays = re.findall(r'\[[^\]]+\]', arrays_text)
+            
+            x = eval(re.sub(r'\s+', '', arrays[0]))
+            y = eval(re.sub(r'\s+', '', arrays[1]))
+            match_vars = eval(re.sub(r'\s+', '', arrays[2]))
+            sol = (x, y, match_vars)
         else:
             sol = None
 
@@ -107,20 +112,23 @@ def run_minizinc(model_file, n, solver, seed, time_limit=TIME_LIMIT_MS, swap=Tru
 
 
 def build_schedule(x, y, match_vars, swap):
-    nPeriods = x.shape[0]
-    nWeeks = x.shape[1]
+    a= len(x)
+    n=int((1+np.sqrt(1+8*a))//2)
+    nPeriods = n//2
+    nWeeks = n-1
 
     schedule = []
     for p in range(nPeriods):
         row = []
         for w in range(nWeeks):
-            mindex = match_vars[w,p]
-            if swap[mindex] == 0:
-                home = x[w,p]
-                away = y[w,p]
+            ind = p * nWeeks + w
+            mindex = match_vars[ind]
+            if swap[mindex-1] == 0:
+                home = x[ind]
+                away = y[ind]
             else:
-                home = y[w,p]
-                away = x[w,p]
+                home = y[ind]
+                away = x[ind]
             row.append([home, away])
         schedule.append(row)
 
@@ -152,45 +160,52 @@ def main():
     parser.add_argument("--seed", type=int, default=55)
 
     args = parser.parse_args()
+    
+    
+    if os.path.exists("/app/res"):
+        output_file = f"/app/res/CP/{args.n}.json"
+    else:
+        output_file = f"C:\\Users\\xPica\\Documents\\CDMO_Proj_LiPiDo\\res\\CP\\{args.n}.json"
 
     # Run MiniZinc models
 
     match_result = run_minizinc(MATCH_MODEL_FILE, args.n, args.solver, args.seed, swap=False)
 
-    print(match_result)
-
     swap_result = run_minizinc(SWAP_MODEL_FILE,  args.n, args.solver, args.seed, swap=True)
 
-    print(swap_result)
-
-
+    if swap_result["sol"] is None:
+        swap_result["sol"] = [0] * (args.n//2 * (args.n - 1))
 
     if match_result["sol"] is None:
-        raise RuntimeError("Match model returned no solution.")
-    if swap_result["sol"] is None:
-        raise RuntimeError("Swap model returned no solution.")
+        schedule = []
+        swap_result["optimal"] = "false"
+        swap_result["obj"] = "null"
+    else:
+        x,y,match_vars =match_result["sol"]
+        schedule = build_schedule(
+            x=x,
+            y=y,
+            match_vars=match_vars,
+            swap=swap_result["sol"]
+        )
 
-    x,y,match_vars =match_result["sol"]
-
-    # Combine
-    schedule = build_schedule(
-        x=x,
-        y=y,
-        match_vars=match_vars,
-        swap=swap_result["sol"]
-    )
+    time = int(match_result["time"] + swap_result["time"])
+    if time > TIME_LIMIT_MS / 1000:
+        time = 300  # timeout fallback
+        swap_result["optimal"] = "false"
 
     final_data = {
-        "time": match_result["time"] + swap_result["time"],
+        "time": int(match_result["time"] + swap_result["time"]),
         "optimal": swap_result["optimal"],
         "obj": swap_result["obj"],
-        "result": schedule,
+        "sol": schedule,
   }
 
-    # Save JSON
-    with open(args.output, "w") as f:
-        json.dump(final_data, f, indent=4)
-    print(f"Saved {args.output}")
+    # Save JSON nested under the solver key
+    output_payload = {args.solver: final_data}
+    with open(output_file, "w") as f:
+        json.dump(output_payload, f, indent=4)
+    print(f"Saved {output_file}")
 
 if __name__ == "__main__":
     main()

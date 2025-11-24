@@ -27,7 +27,7 @@ constraint forall(t in Teams) (
     )
   } in
     % Compute the imbalance as deviation from ideal home/away split
-    imbalance[t] = abs(2 * home_count - (n - 1)) - 1
+    imbalance[t] = abs(2 * home_count - (n - 1))
 );
 
 constraint swap[1]=0;
