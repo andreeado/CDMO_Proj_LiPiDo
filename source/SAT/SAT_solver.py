@@ -14,7 +14,7 @@ at_most_k = at_most_k_seq
 at_least_k = at_least_k_seq
 
 
-def STS_SAT(n, time_limit=300, optimality=False, seed=42, verbose=False):
+def STS_SAT(n, time_limit=300, optimality=False, seed=19, verbose=False):
     start_time = time.time()
     
     W = n - 1
@@ -146,16 +146,16 @@ def STS_SAT(n, time_limit=300, optimality=False, seed=42, verbose=False):
         # Compute the initial imbalance of the feasible solution
         initial_imbalance, initial_team_imbalances = compute_imbalance(n, feasible_schedule, None, None)
         best_max_imbalance = max(initial_team_imbalances) if initial_team_imbalances else W
+        best_imbalance = initial_imbalance
 
         if verbose:
-            print(f"Initial imbalance (no swaps):\t{initial_imbalance}")
+            print(f"Initial objective value (no swaps):\t{best_max_imbalance}")
 
         # Binary search bounds
-        lower_bound = 0
-        upper_bound = W
+        lower_bound = 1
+        upper_bound = best_max_imbalance
 
         best_solution = None
-        best_imbalance = initial_imbalance
 
         # Swap variables
         swap = [Bool(f"swap_m{m}") for m in range(M + 1)]
@@ -172,15 +172,15 @@ def STS_SAT(n, time_limit=300, optimality=False, seed=42, verbose=False):
             team_home_vars[t] = vars_t
 
 
-        max_team_imbalance = min(n - 1, initial_imbalance)
+        max_team_imbalance = min(n - 1, best_max_imbalance)
         if verbose:
             print(f"Starting binary search optimization (bounds: {lower_bound}-{upper_bound})")
 
-        while lower_bound <= upper_bound and time.time() - start_time < time_limit - 1:
+        while lower_bound <= upper_bound and time.time() - start_time < time_limit - 3:
             mid = (lower_bound + upper_bound) // 2
 
             if verbose:
-                print(f"Trying imbalance <= {mid} for every team\t(total imbalance <= {mid*n})")
+                print(f"Trying imbalance <= {mid} for every team")
 
             iteration_time = (time_limit - 1) - (time.time() - start_time)
 
@@ -195,13 +195,11 @@ def STS_SAT(n, time_limit=300, optimality=False, seed=42, verbose=False):
                 imbalance_bits = [Bool(f"team{t}_imb_bit_{i}") for i in range(max_team_imbalance)]
                 home_vars_t = team_home_vars[t]
 
-                target = (n - 1) / 2  # ideal values for home/away games
-
                 for k in range(1, max_team_imbalance + 1):
                     conds = []
 
                     # case too many home games: sum(home_vars_t) >= upper_bound_hg
-                    upper_bound_hg = math.ceil(target + k)
+                    upper_bound_hg = math.ceil((n - 1 + k) / 2)
                     if upper_bound_hg <= len(home_vars_t):
                         geq_var = Bool(f"too_many_home_t{t}_k{upper_bound_hg}")
 
@@ -216,7 +214,7 @@ def STS_SAT(n, time_limit=300, optimality=False, seed=42, verbose=False):
                         conds.append(geq_var)
 
                     # case too few home games: sum(home_vars_t) <= lower_bound_hg
-                    lower_bound_hg = math.floor(target - k)
+                    lower_bound_hg = math.floor((n - 1 - k) / 2)
                     if lower_bound_hg >= 0:
                         leq_var = Bool(f"too_few_home_t{t}_k{lower_bound_hg}")
 
@@ -257,7 +255,7 @@ def STS_SAT(n, time_limit=300, optimality=False, seed=42, verbose=False):
                 actual_max_team_imbalance = max(team_imbalances) if team_imbalances else 0
 
                 if verbose:
-                    print(f"Solution found with total imbalance =\t{actual_imbalance}")
+                    print(f"Solution found with objective value =\t{actual_max_team_imbalance}")
                 
                 # Give priority to min-max
                 if actual_max_team_imbalance < best_max_imbalance:
@@ -271,8 +269,8 @@ def STS_SAT(n, time_limit=300, optimality=False, seed=42, verbose=False):
                         best_imbalance = actual_imbalance
                         best_solution = (schedule_model, feasible_schedule, swap_model, swap)
                 
-                # Goal = total imbalance = 0
-                if actual_imbalance == 0:
+                # Goal: objective function = 1
+                if actual_max_team_imbalance == 1:
                     if verbose:
                         print("Optimal solution found!")
                     break
@@ -281,7 +279,7 @@ def STS_SAT(n, time_limit=300, optimality=False, seed=42, verbose=False):
                 upper_bound = mid-1
             else:
                 if verbose:
-                    print(f"No solution with imbalance <= {mid} for every team\t(total imbalance <= {mid*n})")
+                    print(f"No solution with imbalance <= {mid} for every team")
                 lower_bound = mid + 1
 
         total_time = time.time() - start_time
@@ -293,7 +291,7 @@ def STS_SAT(n, time_limit=300, optimality=False, seed=42, verbose=False):
 
         if best_solution:
             if verbose:
-                print(f"Best imbalance found: {best_imbalance}")
+                print(f"Best imbalance found: {actual_max_team_imbalance}")
             return best_solution, total_time
         else:
             if verbose:
@@ -309,35 +307,36 @@ def STS_SAT(n, time_limit=300, optimality=False, seed=42, verbose=False):
         return results, phase1_time
 
 
-
 def format_and_save_solution(n: int, result: tuple, runtime: float, time_limit: int, filepath: str, optimality: bool):
     """
     Formats the SAT solver output and saves it to a JSON file.
+    Updates 'z3_sat_feasible' or 'z3_sat_optimal' depending on the mode,
+    preserving other existing data in the file.
     """
-
+    
+    # Determine the key based on the optimality flag
+    current_key = "z3_sat_optimal" if optimality else "z3_sat_feasible"
 
     is_timeout = runtime >= time_limit
-    is_optimal = optimality and (not is_timeout)
+
+    # Prepare the output data structure for the current run
+    current_run_data = {}
 
     if result is None or result[0] is None:
-
-        output_data = {
-            "z3_sat_solver": {
-                "time": time_limit if is_timeout else math.floor(runtime),
-                "optimal": is_optimal,  # True for UNSAT (if we required optimality), False for TIMEOUT
-                "obj": None,
-                "sol": []
-            }
+        current_run_data = {
+            "time": time_limit if is_timeout else math.floor(runtime),
+            "optimal": False,
+            "obj": None,
+            "sol": []
         }
-
     else:
         _, feasible_schedule, swap_model, swap = result
         
         W = n - 1
         P = n // 2
-        T1, T2 = build_inverse_tables(n)
+        T1, T2 = build_inverse_tables(n) 
 
-        # 1. Format the solution into the required (n/2)x(n-1) matrix
+        # 1. Format the solution
         sol_matrix = [[[] for _ in range(W)] for _ in range(P)]
         for (w, p), m in feasible_schedule.items():
             try:
@@ -348,25 +347,26 @@ def format_and_save_solution(n: int, result: tuple, runtime: float, time_limit: 
             home, away = (T2[m], T1[m]) if swap_val else (T1[m], T2[m])
             sol_matrix[p][w] = [home, away]
 
-        # 2. Calculate final metrics
-        total_imbalance, _ = compute_imbalance(n, feasible_schedule, swap_model, swap)
+        # 2. Compute final metrics
+        total_imbalance, team_imbalances = compute_imbalance(n, feasible_schedule, swap_model, swap)
+        obj_value = max(team_imbalances)
+        is_optimal = (obj_value==1)
         
-        # If timeout is reached without solving, time should be 300 and optimal false.
+        # If timeout is reached without solving completely, time should be time_limit
         solve_time = math.floor(runtime)
         if is_timeout:
             solve_time = time_limit
 
-        # 3. Construct the JSON output object
-        output_data = {
-            "z3_sat_solver": {
-                "time": solve_time,
-                "optimal": is_optimal,
-                "obj": total_imbalance,
-                "sol": sol_matrix
-            }
+        # 3. Construct the output object for this specific run
+        current_run_data = {
+            "time": solve_time,
+            "optimal": is_optimal,
+            "obj": obj_value,
+            "sol": sol_matrix
         }
 
-    # 4. Load existing data and update it
+    # 4. Load existing data to preserve other keys (e.g., preserve 'feasible' if we are running 'optimal')
+    data = {}
     if os.path.exists(filepath):
         with open(filepath, "r") as f:
             try:
@@ -376,23 +376,22 @@ def format_and_save_solution(n: int, result: tuple, runtime: float, time_limit: 
     else:
         # Create directory if it doesn't exist
         os.makedirs(os.path.dirname(filepath), exist_ok=True)
-        data = {}
+    
+    # 5. Update only the relevant key
+    data[current_key] = current_run_data
 
-    data.update(output_data)
-
-    # 5. Write the updated data back to the file
+    # 6. Write the updated data back to the file
     with open(filepath, 'w') as f:
         json.dump(data, f, indent=4)
     
-    print(f"Solution successfully saved to {filepath}")
-
+    print(f"Solution successfully saved to {filepath} under key '{current_key}'")
 
 if __name__ == "__main__":
     parser = ArgumentParser(description="Solve the Sports Tournament Scheduling problem using a SAT solver.")
     parser.add_argument("n_teams", type=int, help="Number of teams (must be even)")
     parser.add_argument("--time_limit", type=int, default=300, help="Time limit in seconds for the solver")
     parser.add_argument("--optimality", action='store_true', help="Search for the optimal solution (default: False)")
-    parser.add_argument("--seed", type=int, default=42, help="Set a seed for the solver (default: 42)")
+    parser.add_argument("--seed", type=int, default=19, help="Set a seed for the solver (default: 19)")
     parser.add_argument("--verbose", action='store_true', help="Receive feedback from the solver (default: False)")
 
     args = parser.parse_args()

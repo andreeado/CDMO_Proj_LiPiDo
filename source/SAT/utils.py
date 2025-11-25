@@ -1,4 +1,5 @@
 from z3 import *
+import math
 
 
 def match_ID(i,j,n):
@@ -24,9 +25,6 @@ def compute_imbalance(n, feasible_schedule, swap_model, swap):
     
     total_imbalance = 0
     team_imbalances = []
-
-    ideal_low = (n-1) // 2  # W / 2 rounded up
-    ideal_high = (n) // 2   # W / 2 rounded down
     
     for t in range(1, n + 1):
         home_games = 0
@@ -41,11 +39,7 @@ def compute_imbalance(n, feasible_schedule, swap_model, swap):
             if (T1[m] == t and not swap_val) or (T2[m] == t and swap_val):
                 home_games += 1
         
-        imbalance = 0
-        if home_games < ideal_low:
-            imbalance = ideal_low - home_games
-        elif home_games > ideal_high:
-            imbalance = home_games - ideal_high
+        imbalance = abs(2 * home_games - (n - 1))
 
         total_imbalance += imbalance
         team_imbalances.append(imbalance)

@@ -1,0 +1,28 @@
+{
+    "z3_sat_feasible": {
+        "time": 0,
+        "optimal": true,
+        "obj": 1,
+        "sol": [
+            [
+                [
+                    1,
+                    2
+                ]
+            ]
+        ]
+    },
+    "z3_sat_optimal": {
+        "time": 0,
+        "optimal": true,
+        "obj": 1,
+        "sol": [
+            [
+                [
+                    1,
+                    2
+                ]
+            ]
+        ]
+    }
+}
