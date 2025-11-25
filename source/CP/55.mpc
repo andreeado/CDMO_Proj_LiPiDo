@@ -1,7 +1,8 @@
 {
     "intermediate-solutions": true,
     "output-objective": true,
-    "random-seed": "0",
+    "random-seed": "55",
     "solver": "org.gecode.gecode@6.3.0",
+    "solver-statistics": true,
     "time-limit": 300000
 }

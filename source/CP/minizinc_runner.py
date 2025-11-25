@@ -15,10 +15,10 @@ if os.path.exists("/app/res"):
 else:
     MINIZINC_PATH = "C:\\Users\\xPica\\AppData\\Local\\Programs\\MiniZinc\\minizinc.exe"
     MATCH_MODEL_FILE = [
-                        "C:\\Users\\xPica\\Documents\\CDMO_Proj_LiPiDo\\source\\CP\\ZZZ\\glob.mzn",
-                        "C:\\Users\\xPica\\Documents\\CDMO_Proj_LiPiDo\\source\\CP\\ZZZ\\base.mzn",
-                        #"C:\\Users\\xPica\\Documents\\CDMO_Proj_LiPiDo\\source\\CP\\ZZZ\\base_noIC.mzn",
-                        #"C:\\Users\\xPica\\Documents\\CDMO_Proj_LiPiDo\\source\\CP\\ZZZ\\glob_noIC.mzn"
+                        "C:\\Users\\xPica\\Documents\\CDMO_Proj_LiPiDo\\source\\CP\\ZZZ\\globale.mzn",
+                        "C:\\Users\\xPica\\Documents\\CDMO_Proj_LiPiDo\\source\\CP\\ZZZ\\naive.mzn",
+                        #"C:\\Users\\xPica\\Documents\\CDMO_Proj_LiPiDo\\source\\CP\\ZZZ\\naive_noIC.mzn",
+                        #"C:\\Users\\xPica\\Documents\\CDMO_Proj_LiPiDo\\source\\CP\\ZZZ\\globale_noIC.mzn"
                         ]
 
     SWAP_MODEL_FILE  = "C:\\Users\\xPica\\Documents\\CDMO_Proj_LiPiDo\\source\\CP\\ZZZ\\OPT.mzn"
@@ -69,6 +69,7 @@ def run_minizinc(model_file, n, solver, seed, time_limit=TIME_LIMIT_MS, swap=Tru
     # -------------------------
     #   SOLUTION PARSING
     # -------------------------
+
     if swap:
         sol = next(
             (eval(m.group(0)
@@ -97,10 +98,17 @@ def run_minizinc(model_file, n, solver, seed, time_limit=TIME_LIMIT_MS, swap=Tru
             sol = None
 
 
-    # -------------------------
-    #   OPTIMAL FLAG
-    # -------------------------
-    optimal = ("==========" in output_text) or ("optimal" in output_text.lower())
+    optimal = False
+    if swap:
+        optimal = '=====OPTIMAL=====' in output_text
+    else:
+        timeout_flag = '=====UNKNOWN=====' in output_text
+        infeasible_flag = '=====UNSATISFIABLE=====' in output_text or 'infeasible' in output_text.lower()
+
+        if infeasible_flag or timeout_flag:
+            # INFEASIBLE SOLUTION
+            sol = []
+            obj = "null"
 
     return {
         "time": floor(solver_time),
