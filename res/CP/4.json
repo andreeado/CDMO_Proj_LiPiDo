@@ -1,26 +1,14 @@
 {
-    "gecode_glob": {
-        "time": 9,
-        "optimal": "false",
-        "obj": "null",
+    "gecode_globale": {
+        "time": 8,
+        "optimal": false,
+        "obj": null,
         "sol": []
     },
-    "gecode_base": {
-        "time": 9,
-        "optimal": "false",
-        "obj": "null",
-        "sol": []
-    },
-    "gecode_base_noIC": {
-        "time": 17,
-        "optimal": "false",
-        "obj": "null",
-        "sol": []
-    },
-    "gecode_glob_noIC": {
-        "time": 16,
-        "optimal": "false",
-        "obj": "null",
+    "gecode_naive": {
+        "time": 8,
+        "optimal": false,
+        "obj": null,
         "sol": []
     }
 }

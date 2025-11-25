@@ -15,13 +15,13 @@ if os.path.exists("/app/res"):
 else:
     MINIZINC_PATH = "C:\\Users\\xPica\\AppData\\Local\\Programs\\MiniZinc\\minizinc.exe"
     MATCH_MODEL_FILE = [
-                        "C:\\Users\\xPica\\Documents\\CDMO_Proj_LiPiDo\\source\\CP\\ZZZ\\globale.mzn",
-                        "C:\\Users\\xPica\\Documents\\CDMO_Proj_LiPiDo\\source\\CP\\ZZZ\\naive.mzn",
-                        #"C:\\Users\\xPica\\Documents\\CDMO_Proj_LiPiDo\\source\\CP\\ZZZ\\naive_noIC.mzn",
-                        #"C:\\Users\\xPica\\Documents\\CDMO_Proj_LiPiDo\\source\\CP\\ZZZ\\globale_noIC.mzn"
+                        "C:\\Users\\xPica\\Documents\\CDMO_Proj_LiPiDo\\source\\CP\\globale.mzn",
+                        "C:\\Users\\xPica\\Documents\\CDMO_Proj_LiPiDo\\source\\CP\\naive.mzn",
+                        #"C:\\Users\\xPica\\Documents\\CDMO_Proj_LiPiDo\\source\\CP\\naive_noIC.mzn",
+                        #"C:\\Users\\xPica\\Documents\\CDMO_Proj_LiPiDo\\source\\CP\\globale_noIC.mzn"
                         ]
 
-    SWAP_MODEL_FILE  = "C:\\Users\\xPica\\Documents\\CDMO_Proj_LiPiDo\\source\\CP\\ZZZ\\OPT.mzn"
+    SWAP_MODEL_FILE  = "C:\\Users\\xPica\\Documents\\CDMO_Proj_LiPiDo\\source\\CP\\OPT.mzn"
 
 TIME_LIMIT_MS = 300000  # 5 min
 
@@ -95,12 +95,12 @@ def run_minizinc(model_file, n, solver, seed, time_limit=TIME_LIMIT_MS, swap=Tru
             match_vars = eval(re.sub(r'\s+', '', arrays[2]))
             sol = (x, y, match_vars)
         else:
-            sol = None
+            sol = []
 
 
     optimal = False
     if swap:
-        optimal = '=====OPTIMAL=====' in output_text
+        optimal = '==========' in output_text
     else:
         timeout_flag = '=====UNKNOWN=====' in output_text
         infeasible_flag = '=====UNSATISFIABLE=====' in output_text or 'infeasible' in output_text.lower()
@@ -108,7 +108,7 @@ def run_minizinc(model_file, n, solver, seed, time_limit=TIME_LIMIT_MS, swap=Tru
         if infeasible_flag or timeout_flag:
             # INFEASIBLE SOLUTION
             sol = []
-            obj = "null"
+            obj = None
 
     return {
         "time": floor(solver_time),
@@ -183,8 +183,6 @@ def main():
 
     # Run MiniZinc models
 
-
-
     swap_result = run_minizinc(SWAP_MODEL_FILE,  args.n, args.solver, args.seed, swap=True)
 
     if swap_result["sol"] is None:
@@ -193,12 +191,14 @@ def main():
     output_payload = {}
 
     for model in MATCH_MODEL_FILE:
-        match_result = run_minizinc(model,  args.n, args.solver, args.seed, swap=False)
 
-        if match_result["sol"] is None:
+        match_result = run_minizinc(model,  args.n, args.solver, args.seed, swap=False)
+        model_name = os.path.splitext(os.path.basename(model))[0]
+
+        if match_result["sol"] == []:
             schedule = []
-            swap_result["optimal"] = "false"
-            swap_result["obj"] = "null"
+            swap_result["optimal"] = False
+            swap_result["obj"] = None
         else:
             x,y,match_vars =match_result["sol"]
             schedule = build_schedule(
@@ -211,15 +211,16 @@ def main():
         time = int(match_result["time"] + swap_result["time"])
         if time > TIME_LIMIT_MS / 1000:
             time = 300  # timeout fallback
-            swap_result["optimal"] = "false"
+            swap_result["optimal"] = False
 
         final_data = {
-            "time": int(match_result["time"] + swap_result["time"]),
+            "time": time,
             "optimal": swap_result["optimal"],
             "obj": swap_result["obj"],
             "sol": schedule,
         }
-        output_payload[args.solver+"_"+model] = final_data
+
+        output_payload[args.solver+"_"+model_name] = final_data
 
     # Save JSON nested under the solver key
 

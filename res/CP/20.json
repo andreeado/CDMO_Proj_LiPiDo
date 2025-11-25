@@ -1,6 +1,6 @@
 {
-    "gecode_glob": {
-        "time": 175,
+    "gecode_globale": {
+        "time": 137,
         "optimal": true,
         "obj": 1,
         "sol": [
@@ -786,7 +786,7 @@
             ]
         ]
     },
-    "gecode_base": {
+    "gecode_naive": {
         "time": 1,
         "optimal": true,
         "obj": 1,
@@ -1572,17 +1572,5 @@
                 ]
             ]
         ]
-    },
-    "gecode_base_noIC": {
-        "time": 300,
-        "optimal": "false",
-        "obj": "null",
-        "sol": []
-    },
-    "gecode_glob_noIC": {
-        "time": 300,
-        "optimal": "false",
-        "obj": "null",
-        "sol": []
     }
 }
