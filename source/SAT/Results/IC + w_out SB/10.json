@@ -197,7 +197,7 @@
         ]
     },
     "z3_sat_optimal": {
-        "time": 3,
+        "time": 2,
         "optimal": true,
         "obj": 1,
         "sol": [

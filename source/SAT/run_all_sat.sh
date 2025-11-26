@@ -15,7 +15,7 @@ do
     # Executes the docker command as defined in the README
     # Adding --optimality since you were working on the objective function
     # Adding --verbose to see progress in the terminal
-    docker-compose run --rm solve-SAT --optimality $n --verbose
+    docker-compose run --rm solve-SAT $n --optimality --verbose
     
     echo "Completed n=$n"
     echo "" # Empty line for separation

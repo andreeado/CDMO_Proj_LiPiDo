@@ -1,6 +1,6 @@
 {
     "z3_sat_feasible": {
-        "time": 7,
+        "time": 6,
         "optimal": false,
         "obj": 15,
         "sol": [
@@ -503,7 +503,7 @@
         ]
     },
     "z3_sat_optimal": {
-        "time": 39,
+        "time": 36,
         "optimal": true,
         "obj": 1,
         "sol": [
