@@ -17,18 +17,19 @@ case "$APPROACH" in
   all)
     for inst in {2..20..2}; do
       echo "Running CP on instance $inst"
-      python source/CP/minizinc_runner.py $inst
+      python source/CP/minizinc_runner.py $inst "$@"
     done
-    for inst in {2..16..2}; do
+
+    for inst in {2..18..2}; do
       for solver in cbc gurobi HiGHS; do
         echo "Running MIP on instance $inst with solver $solver"
-        python source/MIP/mip_solver_s.py $inst --solver_name $solver
+        python source/MIP/mip_solver_pulp.py $inst --solver_name $solver "$@"
       done
     done
 
-    for inst in {2..22..2}; do
+    for inst in {2..20..2}; do
       echo "Running SAT on instance $inst"
-      python source/SAT/SAT_solver.py $inst
+      python source/SAT/SAT_solver.py $inst "$@"
     done
     ;;
   *)

@@ -35,8 +35,10 @@ docker-compose build
 
 #### Run MIP on a specific instance:
 ```bash
-docker-compose run solve-mip <n_teams> --solver_name <cbc|gurobi|HiGHS>
+docker-compose run solve-mip <n_teams> --time_limit <time_limit> --optimality --solver_name <cbc|gurobi|HiGHS> 
 ```
+
+Default: `time_limit=300`, `solver_name=gurobi`, `optimality=False`
 
 #### Run CP on a specific instance:
 ```bash

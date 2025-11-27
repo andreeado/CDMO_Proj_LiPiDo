@@ -5,7 +5,6 @@ import time, math
 import logging
 from utils import *
 
-
 logger = logging.getLogger(__name__)
 
 def solve(solver_name, params, verbose, optimize=False): 
@@ -34,33 +33,44 @@ def solve(solver_name, params, verbose, optimize=False):
     opt = False
     solve_time = math.floor(time.time() - init_time)
 
+    # Check if timeout occurred (PuLP may not properly detect Gurobi timeout status)
+    timeout_occurred = solve_time >= params['timeout']
+
     match prob.sol_status:
         # OPTIMAL SOLUTION FOUND
         case const.LpSolutionOptimal:
+            logger.info("Optimal solution found during feasibility phase.")
             x, T1, T2, data, circle_schedule = results
             sol = extract_schedule_from_matches(x, T1, T2, data, circle_schedule)
             obj = 0 if prob.objective.value() is None else round(prob.objective.value())
-            if solve_time < 300:
-                opt = True
+            opt = True if not timeout_occurred else False
         # NOT OPTIMAL SOLUTION FOUND
         case const.LpSolutionIntegerFeasible:
+            logger.info("Feasible solution found during feasibility phase.")
             x, T1, T2, data, circle_schedule = results
             sol = extract_schedule_from_matches(x, T1, T2, data, circle_schedule)
             obj = 0 if prob.objective.value() is None else round(prob.objective.value())
             opt = False
-            solve_time = int(params['timeout'])
         # INFEASIBLE SOLUTION
         case const.LpSolutionInfeasible:
-            sol = []
-            obj = "None"
-            opt = True
-            solve_time = 0
-        # TIMEOUT
+            # Only mark as infeasible if no timeout occurred
+            if not timeout_occurred:
+                logger.info("Infeasible solution found during feasibility phase.")
+                sol = []
+                obj = "None"
+                opt = True
+                solve_time = 0
+            else:
+                # Timeout before finding solution
+                logger.info("Timeout occurred before finding solution during feasibility phase.")
+                sol = []
+                obj = "None"
+                opt = False
+        # TIMEOUT OR ANY OTHER CASE
         case _:
             sol = []
             obj = "None"
             opt = False
-            solve_time = int(params['timeout'])
     
     # PHASE 2: OPTIMIZATION (if requested and time permits)
     if optimize and sol:
@@ -209,12 +219,19 @@ def set_constraints_circle(problem, schedule, data):
             # Upper bound: if defective, appear exactly once; otherwise at most 2
             problem += team_appearances <= 1 + (1 - defective[t, p]) * 1
 
+    """ # SYMMETRY BREAKING: first week in consecutive periods starting from 0
+    for idx, m in enumerate(schedule[0]):
+        period = idx  # Periods 0, 1, 2, ... for matches 0, 1, 2, ...
+        problem += x[m, period] == 1 """
+    """ # SYMMETRY BREAKING: first match to first period
+    first_match = schedule[0][0]
+    problem += x[first_match, 0] == 1 """
+
     return x, T1, T2, data, schedule
 
 def set_optimization(problem, feasible_schedule, data):
     n_teams = data['n_teams']
     n_weeks = data['n_weeks']
-    n_periods = data['n_periods']
     Teams = data['teams']
     Periods = data['periods']
     lower_bound = 1
@@ -270,84 +287,10 @@ def set_optimization(problem, feasible_schedule, data):
         
         # Link to max imbalance
         problem += balance_pos[t] + balance_neg[t] <= max_imbalance
-    # SYMMETRY BREAKING: first period no swaps
-    for w in range(n_weeks):
-        if (0, w) in swap:
-            problem += swap[0, w] == 0
-
+    # SYMMETRY BREAKING: first cell no swap
+    problem += swap[0,0] == 0
     return swap
 
-def apply_swaps(schedule, swap_vars, data):
-    """
-    Apply home/away swaps to the schedule based on swap variable values.
-    
-    Returns:
-        Updated schedule with swaps applied
-    """
-    n_periods = data['n_periods']
-    n_weeks = data['n_weeks']
-    
-    # Create a copy of the schedule to modify
-    new_schedule = []
-    for p in range(n_periods):
-        period_schedule = []
-        for w in range(n_weeks):
-            if schedule[p][w]:
-                period_schedule.append(schedule[p][w][:])  # Copy the match
-            else:
-                period_schedule.append([])
-        new_schedule.append(period_schedule)
-    
-    # Apply swaps
-    for (p, w), swap_var in swap_vars.items():
-        if swap_var.varValue and swap_var.varValue > 0.5:  # Swap is active
-            if new_schedule[p][w]:
-                # Swap home and away teams
-                home, away = new_schedule[p][w]
-                new_schedule[p][w] = [away, home]
-    
-    return new_schedule
-
-def extract_schedule_from_matches(match_period, T1, T2, data, circle_schedule):
-    """
-    Extract schedule from match_period variables
-    Returns schedule in format: [period][week] = [team1, team2]
-    where team numbers are 1-indexed
-    """
-    n_teams = data['n_teams']
-    n_weeks = data['n_weeks']
-    n_periods = data['n_periods']
-    M = n_teams * (n_teams - 1) // 2
-    
-    # Initialize schedule structure: schedule[period][week] = [home, away]
-    schedule = []
-    for p in range(n_periods):
-        period_schedule = []
-        for w in range(n_weeks):
-            period_schedule.append([])
-        schedule.append(period_schedule)
-    
-    # Create reverse mapping: match_id -> week
-    match_to_week = {}
-    for week, match_list in circle_schedule.items():
-        for match_id in match_list:
-            match_to_week[match_id] = week
-    
-    # Extract assignments from decision variables
-    for m in range(1, M + 1):
-        for p in range(n_periods):
-            if match_period[m, p].varValue and match_period[m, p].varValue > 0.5:
-                # Find which week this match belongs to
-                if m in match_to_week:
-                    w = match_to_week[m]
-                    # Get teams for this match (already 1-indexed from T1, T2)
-                    team1 = T1[m]
-                    team2 = T2[m]
-                    # Store as [home, away] - using team1 as home by default
-                    schedule[p][w] = [team1, team2]
-                break
-    
-    return schedule
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, 
@@ -356,12 +299,15 @@ if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument("n_teams", type=int, help="Number of teams (must be even)")
 
-    parser.add_argument("--solver_name", type=str, default="cbc",
+    parser.add_argument("--solver_name", type=str, default="gurobi",
                         choices=["cbc", "gurobi", "HiGHS"],
-                        help="Solver name (default: cbc)")
+                        help="Solver name (default: gurobi)")
+    
+    parser.add_argument("--time_limit", type=int, default=300,
+                        help="Time limit in seconds (default: 300)")
     
     # add optimization flag
-    parser.add_argument("--optimize", action='store_true',
+    parser.add_argument("--optimality", action='store_true',
                         help="Enable optimization phase after feasibility (default: False)")
     
     args = parser.parse_args()
@@ -370,10 +316,11 @@ if __name__ == "__main__":
     
     # Set up parameters
     n_teams = args.n_teams
-    params = {'timeout': 300,
+    timeout = args.time_limit
+    params = {'timeout': timeout,
               'n_teams': n_teams}
-    verbose = 0  # Solver verbosity
-    result_data = solve(args.solver_name, params, verbose, optimize=args.optimize)
+    verbose = 1  # Solver verbosity
+    result_data = solve(args.solver_name, params, verbose, optimize=args.optimality)
     
     # Extract values from the result dictionary
     solver_result = result_data[args.solver_name]

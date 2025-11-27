@@ -19,6 +19,78 @@ def build_inverse_tables(n):
 
     return T1, T2
 
+def extract_schedule_from_matches(match_period, T1, T2, data, circle_schedule):
+    """
+    Extract schedule from match_period variables
+    Returns schedule in format: [period][week] = [team1, team2]
+    where team numbers are 1-indexed
+    """
+    n_teams = data['n_teams']
+    n_weeks = data['n_weeks']
+    n_periods = data['n_periods']
+    M = n_teams * (n_teams - 1) // 2
+    
+    # Initialize schedule structure: schedule[period][week] = [home, away]
+    schedule = []
+    for p in range(n_periods):
+        period_schedule = []
+        for w in range(n_weeks):
+            period_schedule.append([])
+        schedule.append(period_schedule)
+    
+    # Create reverse mapping: match_id -> week
+    match_to_week = {}
+    for week, match_list in circle_schedule.items():
+        for match_id in match_list:
+            match_to_week[match_id] = week
+    
+    # Extract assignments from decision variables
+    for m in range(1, M + 1):
+        for p in range(n_periods):
+            if match_period[m, p].varValue and match_period[m, p].varValue > 0.5:
+                # Find which week this match belongs to
+                if m in match_to_week:
+                    w = match_to_week[m]
+                    # Get teams for this match (already 1-indexed from T1, T2)
+                    team1 = T1[m]
+                    team2 = T2[m]
+                    # Store as [home, away] - using team1 as home by default
+                    schedule[p][w] = [team1, team2]
+                break
+    
+    return schedule
+
+def apply_swaps(schedule, swap_vars, data):
+    """
+    Apply home/away swaps to the schedule based on swap variable values.
+    
+    Returns:
+        Updated schedule with swaps applied
+    """
+    n_periods = data['n_periods']
+    n_weeks = data['n_weeks']
+    
+    # Create a copy of the schedule to modify
+    new_schedule = []
+    for p in range(n_periods):
+        period_schedule = []
+        for w in range(n_weeks):
+            if schedule[p][w]:
+                period_schedule.append(schedule[p][w][:])  # Copy the match
+            else:
+                period_schedule.append([])
+        new_schedule.append(period_schedule)
+    
+    # Apply swaps
+    for (p, w), swap_var in swap_vars.items():
+        if swap_var.varValue and swap_var.varValue > 0.5:  # Swap is active
+            if new_schedule[p][w]:
+                # Swap home and away teams
+                home, away = new_schedule[p][w]
+                new_schedule[p][w] = [away, home]
+    
+    return new_schedule
+
 def create_solution_data(solver_name, schedule, obj, optimal, solve_time):
     """
     Create solution data in the format expected by save_solution
@@ -45,19 +117,6 @@ def create_data(n_teams):
             'periods': list(range(n_periods))
         }
     return data
-
-
-def extract_schedule(x, data):
-    schedule = []
-    for period in data['periods']:
-        period_schedule = []
-        for week in data['weeks']:
-            for i in data['teams']:
-                for j in data['teams']:
-                    if i != j and value(x[i, j, week, period]) > 0.5:
-                        period_schedule.append([i+1, j+1])  # Convert to 1-indexed
-        schedule.append(period_schedule)
-    return schedule
 
 
 def save_solution(solution_data, filepath):
@@ -136,7 +195,7 @@ def analyze_home_away_balance(schedule, n_teams, n_weeks, n_periods):
     
     print("\nHOME-AWAY BALANCE ANALYSIS:")
     print("-" * 50)
-    print(f"{'Team':<6} {'Home':<6} {'Away':<6} {'Balance':<8} {'Total':<6}")
+    print(f"{'Team':<6} {'Home':<6} {'Away':<6} {'Balance':<8}")
     print("-" * 50)
     
     total_imbalance = 0
@@ -145,7 +204,7 @@ def analyze_home_away_balance(schedule, n_teams, n_weeks, n_periods):
         total_games = home_count[team] + away_count[team]
         total_imbalance += balance
         
-        print(f"{team+1:<6} {home_count[team]:<6} {away_count[team]:<6} {balance:<8} {total_games:<6}")
+        print(f"{team+1:<6} {home_count[team]:<6} {away_count[team]:<6} {balance:<8}")
     
     print("-" * 50)
     print(f"Total imbalance: {total_imbalance}")
