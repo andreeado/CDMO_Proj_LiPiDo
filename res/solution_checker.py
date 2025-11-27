@@ -54,6 +54,7 @@ def fatal_errors(solution, obj, time, optimal, teams):
 def check_solution(solution: list, obj, time, optimal):
 
     periods, solution_matches, teams = get_elements(solution)
+
     errors = fatal_errors(solution, obj, time, optimal, teams)
 
     if len(errors) == 0 and len(solution) > 0:
@@ -117,3 +118,4 @@ if __name__ == '__main__':
             status = "VALID" if type(message) == str else "INVALID"
             message_str = '\n\t  '.join(message)
             print(f"  Approach: {approach}\n    Status: {status}\n    Reason: {message if status == 'VALID' else message_str}\n")
+

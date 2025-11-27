@@ -325,7 +325,7 @@ def format_and_save_solution(n: int, result: tuple, runtime: float, time_limit: 
     if result is None or result[0] is None:
         current_run_data = {
             "time": time_limit if is_timeout else math.floor(runtime),
-            "optimal": False,
+            "optimal": False if is_timeout else True,
             "obj": None,
             "sol": []
         }
