@@ -350,7 +350,6 @@ def format_and_save_solution(n: int, result: tuple, runtime: float, time_limit: 
         # 2. Compute final metrics
         total_imbalance, team_imbalances = compute_imbalance(n, feasible_schedule, swap_model, swap)
         obj_value = max(team_imbalances)
-        is_optimal = (obj_value==1)
         
         # If timeout is reached without solving completely, time should be time_limit
         solve_time = math.floor(runtime)
@@ -360,7 +359,7 @@ def format_and_save_solution(n: int, result: tuple, runtime: float, time_limit: 
         # 3. Construct the output object for this specific run
         current_run_data = {
             "time": solve_time,
-            "optimal": is_optimal,
+            "optimal": False if is_timeout else True,
             "obj": obj_value,
             "sol": sol_matrix
         }
