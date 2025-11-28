@@ -360,7 +360,7 @@ def format_and_save_solution(n: int, result: tuple, runtime: float, time_limit: 
         current_run_data = {
             "time": solve_time,
             "optimal": False if is_timeout else True,
-            "obj": obj_value,
+            "obj": obj_value if optimality else None,
             "sol": sol_matrix
         }
 
