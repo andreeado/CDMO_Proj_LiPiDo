@@ -1,5 +1,5 @@
 {
-    "gecode_globale": {
+    "gecode_global": {
         "time": 0,
         "optimal": true,
         "obj": 1,
@@ -282,7 +282,7 @@
             ]
         ]
     },
-    "gecode_naive": {
+    "gecode_count": {
         "time": 0,
         "optimal": true,
         "obj": 1,

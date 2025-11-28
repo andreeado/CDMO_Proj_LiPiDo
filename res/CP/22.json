@@ -1,11 +1,11 @@
 {
-    "gecode_globale": {
+    "gecode_global": {
         "time": 300,
         "optimal": false,
         "obj": null,
         "sol": []
     },
-    "gecode_naive": {
+    "gecode_count": {
         "time": 300,
         "optimal": false,
         "obj": null,

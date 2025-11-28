@@ -10,14 +10,14 @@ import numpy as np
 # Detect MiniZinc path
 if os.path.exists("/app/res"):
     MINIZINC_PATH = "minizinc"
-    MATCH_MODEL_FILE = ["/app/source/CP/match_model.mzn",
-                        "/app/source/CP/naive.mzn"]
+    MATCH_MODEL_FILE = ["/app/source/CP/global.mzn",
+                        "/app/source/CP/count.mzn"]
     SWAP_MODEL_FILE = "/app/source/CP/OPT.mzn"
 else:
     MINIZINC_PATH = "C:\\Users\\xPica\\AppData\\Local\\Programs\\MiniZinc\\minizinc.exe"
     MATCH_MODEL_FILE = [
-                        "C:\\Users\\xPica\\Documents\\CDMO_Proj_LiPiDo\\source\\CP\\globale.mzn",
-                        "C:\\Users\\xPica\\Documents\\CDMO_Proj_LiPiDo\\source\\CP\\naive.mzn",
+                        "C:\\Users\\xPica\\Documents\\CDMO_Proj_LiPiDo\\source\\CP\\global.mzn",
+                        "C:\\Users\\xPica\\Documents\\CDMO_Proj_LiPiDo\\source\\CP\\count.mzn",
                         #"C:\\Users\\xPica\\Documents\\CDMO_Proj_LiPiDo\\source\\CP\\naive_noIC.mzn",
                         #"C:\\Users\\xPica\\Documents\\CDMO_Proj_LiPiDo\\source\\CP\\globale_noIC.mzn"
                         ]
