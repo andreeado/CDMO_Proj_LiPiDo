@@ -1,12 +1,12 @@
 {
     "gecode_globale": {
-        "time": 301,
+        "time": 300,
         "optimal": false,
         "obj": null,
         "sol": []
     },
     "gecode_naive": {
-        "time": 301,
+        "time": 300,
         "optimal": false,
         "obj": null,
         "sol": []

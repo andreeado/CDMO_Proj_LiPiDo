@@ -1,13 +1,13 @@
 {
     "gecode_globale": {
-        "time": 8,
-        "optimal": false,
+        "time": 0,
+        "optimal": true,
         "obj": null,
         "sol": []
     },
     "gecode_naive": {
-        "time": 8,
-        "optimal": false,
+        "time": 0,
+        "optimal": true,
         "obj": null,
         "sol": []
     }

@@ -1,6 +1,6 @@
 {
     "gecode_globale": {
-        "time": 5,
+        "time": 6,
         "optimal": false,
         "obj": null,
         "sol": [
@@ -13,7 +13,7 @@
         ]
     },
     "gecode_naive": {
-        "time": 4,
+        "time": 5,
         "optimal": false,
         "obj": null,
         "sol": [

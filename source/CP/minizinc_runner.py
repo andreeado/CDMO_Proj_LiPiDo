@@ -105,10 +105,16 @@ def run_minizinc(model_file, n, solver, seed, time_limit=TIME_LIMIT_MS, swap=Tru
         timeout_flag = '=====UNKNOWN=====' in output_text
         infeasible_flag = '=====UNSATISFIABLE=====' in output_text or 'infeasible' in output_text.lower()
 
-        if infeasible_flag or timeout_flag:
+        if timeout_flag:
+            # TIMEOUT SOLUTION
+            sol = []
+            obj = None
+            solver_time = 300  # timeout fallback
+        if infeasible_flag:
             # INFEASIBLE SOLUTION
             sol = []
             obj = None
+            optimal = True
 
     return {
         "time": floor(solver_time),
@@ -172,6 +178,7 @@ def main():
     parser.add_argument("n", type=int, help="Number of teams")
     parser.add_argument("solver", type=str, nargs="?", default="gecode")
     parser.add_argument("--seed", type=int, default=55)
+    parser.add_argument("--no-opt", action="store_true", default=False, help="Do not optimize objective function")
 
     args = parser.parse_args()
     
@@ -183,10 +190,17 @@ def main():
 
     # Run MiniZinc models
 
-    swap_result = run_minizinc(SWAP_MODEL_FILE,  args.n, args.solver, args.seed, swap=True)
+    swap_result = {
+    "time": 0,
+    "optimal": False,
+    "obj": None,
+    "sol": [0] * (args.n//2 * (args.n - 1))
+    }
 
-    if swap_result["sol"] is None:
-        swap_result["sol"] = [0] * (args.n//2 * (args.n - 1))
+    if not args.no_opt:
+        swap_result = run_minizinc(SWAP_MODEL_FILE,  args.n, args.solver, args.seed, swap=True)
+        if swap_result ["sol"] is None:
+            swap_result["sol"] = [0] * (args.n//2 * (args.n - 1))
 
     output_payload = {}
 
@@ -197,7 +211,6 @@ def main():
 
         if match_result["sol"] == []:
             schedule = []
-            swap_result["optimal"] = False
             swap_result["obj"] = None
         else:
             x,y,match_vars =match_result["sol"]
@@ -215,7 +228,7 @@ def main():
 
         final_data = {
             "time": time,
-            "optimal": swap_result["optimal"],
+            "optimal": swap_result["optimal"] or match_result["optimal"],
             "obj": swap_result["obj"],
             "sol": schedule,
         }
