@@ -10,8 +10,9 @@ import numpy as np
 # Detect MiniZinc path
 if os.path.exists("/app/res"):
     MINIZINC_PATH = "minizinc"
-    MATCH_MODEL_FILE = "/app/source/CP/match_model.mzn"
-    SWAP_MODEL_FILE = "/app/source/CP/swap_model.mzn"
+    MATCH_MODEL_FILE = ["/app/source/CP/match_model.mzn",
+                        "/app/source/CP/naive.mzn"]
+    SWAP_MODEL_FILE = "/app/source/CP/OPT.mzn"
 else:
     MINIZINC_PATH = "C:\\Users\\xPica\\AppData\\Local\\Programs\\MiniZinc\\minizinc.exe"
     MATCH_MODEL_FILE = [
@@ -192,7 +193,7 @@ def main():
 
     swap_result = {
     "time": 0,
-    "optimal": False,
+    "optimal": True,
     "obj": None,
     "sol": [0] * (args.n//2 * (args.n - 1))
     }
@@ -200,6 +201,8 @@ def main():
     if not args.no_opt:
         swap_result = run_minizinc(SWAP_MODEL_FILE,  args.n, args.solver, args.seed, swap=True)
         if swap_result ["sol"] is None:
+            swap_result["obj"] = None
+            swap_result["optimal"] = False
             swap_result["sol"] = [0] * (args.n//2 * (args.n - 1))
 
     output_payload = {}
