@@ -13,9 +13,9 @@ A Combinatorial Decision Making and Optimization project implementing three diff
 │   ├── MIP/          # Mixed Integer Programming implementation
 │   ├── CP/           # Constraint Programming implementation
 │   └── SAT/          # SAT solver implementation
-├── run.sh          
-├── Dockerfile      
-└── compose.yml     
+├── run.sh        
+├── Dockerfile    
+└── compose.yml   
 ```
 
 ## Prerequisites
@@ -53,7 +53,7 @@ To give all the parameters to the solver:
 docker-compose run solve-cp <n_teams> [solver] --seed <seed> --no-opt
 ```
 
-Default: `solver="gecode"`, `no-opt=False`.
+Default: `solver="gecode"`, `seed=55`,  `no-opt=False`.
 
 #### Run SAT on a specific instance:
 
