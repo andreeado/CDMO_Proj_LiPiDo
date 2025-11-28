@@ -7,14 +7,14 @@ from utils import *
 
 logger = logging.getLogger(__name__)
 
-def solve(solver_name, params, verbose, optimize=False): 
+def solve(solver_name, params, verbose, optimize=False, symmetry_breaking=False): 
     # PHASE 1: FEASIBILITY
     prob = LpProblem("STS_Feasibility", LpMinimize)
     try:
         data = create_data(params['n_teams'])
         init_time = time.time()
         schedule= generate_circle_schedule(data['n_teams'])
-        results = set_constraints_circle(prob, schedule, data)
+        results = set_constraints_circle(prob, schedule, data, symmetry_breaking=symmetry_breaking)
         match solver_name:
             case 'cbc':
                 solver=PULP_CBC_CMD(msg=verbose, timeLimit=params['timeout'], presolve=False, cuts=False, threads=1)
@@ -29,7 +29,6 @@ def solve(solver_name, params, verbose, optimize=False):
         return [], "N/A", False, params['timeout']
     
     sol = []
-    obj = "None"
     opt = False
     solve_time = math.floor(time.time() - init_time)
 
@@ -37,20 +36,13 @@ def solve(solver_name, params, verbose, optimize=False):
     timeout_occurred = solve_time >= params['timeout']
 
     match prob.sol_status:
-        # OPTIMAL SOLUTION FOUND
-        case const.LpSolutionOptimal:
-            logger.info("Optimal solution found during feasibility phase.")
+        # SOLUTION FOUND
+        case const.LpSolutionOptimal | const.LpSolutionIntegerFeasible:
+            logger.info("Solution found during feasibility phase.")
             x, T1, T2, data, circle_schedule = results
             sol = extract_schedule_from_matches(x, T1, T2, data, circle_schedule)
-            obj = 0 if prob.objective.value() is None else round(prob.objective.value())
+            obj = "None"
             opt = True if not timeout_occurred else False
-        # NOT OPTIMAL SOLUTION FOUND
-        case const.LpSolutionIntegerFeasible:
-            logger.info("Feasible solution found during feasibility phase.")
-            x, T1, T2, data, circle_schedule = results
-            sol = extract_schedule_from_matches(x, T1, T2, data, circle_schedule)
-            obj = 0 if prob.objective.value() is None else round(prob.objective.value())
-            opt = False
         # INFEASIBLE SOLUTION
         case const.LpSolutionInfeasible:
             # Only mark as infeasible if no timeout occurred
@@ -66,7 +58,7 @@ def solve(solver_name, params, verbose, optimize=False):
                 sol = []
                 obj = "None"
                 opt = False
-        # TIMEOUT OR ANY OTHER CASE
+        # ANY OTHER CASE FOR SAFETY
         case _:
             sol = []
             obj = "None"
@@ -83,7 +75,7 @@ def solve(solver_name, params, verbose, optimize=False):
             opt_prob = LpProblem("STS_HomeAway_Optimization", LpMinimize)
             
             try:
-                swap_vars = set_optimization(opt_prob, sol, data)
+                swap_vars = set_optimization(opt_prob, sol, data, symmetry_breaking=symmetry_breaking)
                 
                 # Configure solver with remaining time
                 match solver_name:
@@ -109,12 +101,12 @@ def solve(solver_name, params, verbose, optimize=False):
                     logger.info("Optimization did not improve solution, keeping feasible solution")
                     
             except Exception as e:
-                logger.warning(f"Optimization phase failed: {e}. Returning feasible solution.")
+                logger.warning(f"Optimization phase failed. Returning feasible solution.")
         else:
             logger.info("No time remaining for optimization phase.")
     
     total_time = math.floor(time.time() - init_time)
-    return create_solution_data(solver_name, sol, obj, opt, total_time)
+    return create_solution_data(solver_name, sol, obj, opt, total_time, optimize=optimize, symmetry_breaking=symmetry_breaking)
 
 
 def generate_circle_schedule(n_teams):
@@ -148,7 +140,7 @@ def generate_circle_schedule(n_teams):
             teams = teams[1:] + [teams[0]] 
         return schedule
 
-def set_constraints_circle(problem, schedule, data):
+def set_constraints_circle(problem, schedule, data, symmetry_breaking=False):
     n_teams = data['n_teams']
     n_weeks = data['n_weeks']
     n_periods = data['n_periods']
@@ -219,17 +211,18 @@ def set_constraints_circle(problem, schedule, data):
             # Upper bound: if defective, appear exactly once; otherwise at most 2
             problem += team_appearances <= 1 + (1 - defective[t, p]) * 1
 
-    """ # SYMMETRY BREAKING: first week in consecutive periods starting from 0
-    for idx, m in enumerate(schedule[0]):
-        period = idx  # Periods 0, 1, 2, ... for matches 0, 1, 2, ...
-        problem += x[m, period] == 1 """
-    """ # SYMMETRY BREAKING: first match to first period
-    first_match = schedule[0][0]
-    problem += x[first_match, 0] == 1 """
+    if symmetry_breaking:
+        """ # SYMMETRY BREAKING: first week in consecutive periods starting from 0
+        for idx, m in enumerate(schedule[0]):
+            period = idx  # Periods 0, 1, 2, ... for matches 0, 1, 2, ...
+            problem += x[m, period] == 1 """
+        # SYMMETRY BREAKING: first match to first period
+        first_match = schedule[0][0]
+        problem += x[first_match, 0] == 1
 
     return x, T1, T2, data, schedule
 
-def set_optimization(problem, feasible_schedule, data):
+def set_optimization(problem, feasible_schedule, data, symmetry_breaking=False):
     n_teams = data['n_teams']
     n_weeks = data['n_weeks']
     Teams = data['teams']
@@ -287,8 +280,10 @@ def set_optimization(problem, feasible_schedule, data):
         
         # Link to max imbalance
         problem += balance_pos[t] + balance_neg[t] <= max_imbalance
-    # SYMMETRY BREAKING: first cell no swap
-    problem += swap[0,0] == 0
+
+        if symmetry_breaking:
+            # SYMMETRY BREAKING: first cell no swap
+            problem += swap[0,0] == 0
     return swap
 
 
@@ -310,6 +305,10 @@ if __name__ == "__main__":
     parser.add_argument("--optimality", action='store_true',
                         help="Enable optimization phase after feasibility (default: False)")
     
+    # add symmetry breaking flag
+    parser.add_argument("--sb", action='store_true',
+                        help="Enable symmetry breaking (default: False)")
+    
     args = parser.parse_args()
     if args.n_teams % 2 != 0:
         raise ValueError("Number of teams must be an even integer")
@@ -320,10 +319,10 @@ if __name__ == "__main__":
     params = {'timeout': timeout,
               'n_teams': n_teams}
     verbose = 1  # Solver verbosity
-    result_data = solve(args.solver_name, params, verbose, optimize=args.optimality)
+    result_data = solve(args.solver_name, params, verbose, optimize=args.optimality, symmetry_breaking=args.sb)
     
     # Extract values from the result dictionary
-    solver_result = result_data[args.solver_name]
+    solver_result = next(iter(result_data.values()))
     sol = solver_result["sol"]
     obj = solver_result["obj"]
     opt = solver_result["optimal"]
@@ -342,7 +341,7 @@ if __name__ == "__main__":
         # local
         res_path = f"../../res/MIP/{args.n_teams}.json"
     save_solution(result_data, res_path)
-
+    
     if sol:
         # Display the schedule
         display_schedule(sol, n_teams, n_teams-1, n_teams//2)

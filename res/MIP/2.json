@@ -1,0 +1,54 @@
+{
+  "gurobi_f": {
+    "time": 0,
+    "optimal": true,
+    "obj": "None",
+    "sol": [
+      [
+        [
+          1,
+          2
+        ]
+      ]
+    ]
+  },
+  "gurobi_opt": {
+    "time": 0,
+    "optimal": true,
+    "obj": 1,
+    "sol": [
+      [
+        [
+          1,
+          2
+        ]
+      ]
+    ]
+  },
+  "gurobi_opt_sb": {
+    "time": 0,
+    "optimal": true,
+    "obj": 1,
+    "sol": [
+      [
+        [
+          1,
+          2
+        ]
+      ]
+    ]
+  },
+  "gurobi_f_sb": {
+    "time": 0,
+    "optimal": true,
+    "obj": "None",
+    "sol": [
+      [
+        [
+          1,
+          2
+        ]
+      ]
+    ]
+  }
+}

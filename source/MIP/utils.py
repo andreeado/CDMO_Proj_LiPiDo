@@ -91,10 +91,20 @@ def apply_swaps(schedule, swap_vars, data):
     
     return new_schedule
 
-def create_solution_data(solver_name, schedule, obj, optimal, solve_time):
+def create_solution_data(solver_name, schedule, obj, optimal, solve_time, optimize, symmetry_breaking):
     """
     Create solution data in the format expected by save_solution
     """
+    if not optimize:
+        if symmetry_breaking:
+            solver_name += "_f_sb"
+        else:
+            solver_name += "_f"
+    else:
+        if symmetry_breaking:
+            solver_name += "_opt_sb"
+        else:
+            solver_name += "_opt"
     return {
         solver_name: {
             "time": solve_time,
