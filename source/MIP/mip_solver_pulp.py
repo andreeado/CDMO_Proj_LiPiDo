@@ -17,11 +17,12 @@ def solve(solver_name, params, verbose, optimize=False, symmetry_breaking=False)
         results = set_constraints_circle(prob, schedule, data, symmetry_breaking=symmetry_breaking)
         match solver_name:
             case 'cbc':
-                solver=PULP_CBC_CMD(msg=verbose, timeLimit=params['timeout'], presolve=False, cuts=False, threads=1)
+                solver=PULP_CBC_CMD(msg=verbose, timeLimit=params['timeout'], threads=1, 
+                                        presolve=True, cuts=False)
             case 'gurobi':
                 solver=GUROBI(msg=verbose, timeLimit=params['timeout'], threads=1)
             case 'HiGHS':
-                solver=HiGHS(msg=verbose, timeLimit=math.ceil(params['timeout']), threads=1)
+                solver=HiGHS(msg=verbose, timeLimit=math.ceil(params['timeout']), threads=1, cuts='off')
             case _:
                 raise KeyError('Unsupported solver')
         prob.solve(solver)
@@ -41,7 +42,7 @@ def solve(solver_name, params, verbose, optimize=False, symmetry_breaking=False)
             logger.info("Solution found during feasibility phase.")
             x, T1, T2, data, circle_schedule = results
             sol = extract_schedule_from_matches(x, T1, T2, data, circle_schedule)
-            obj = "None"
+            obj = None
             opt = True if not timeout_occurred else False
         # INFEASIBLE SOLUTION
         case const.LpSolutionInfeasible:
@@ -49,19 +50,19 @@ def solve(solver_name, params, verbose, optimize=False, symmetry_breaking=False)
             if not timeout_occurred:
                 logger.info("Infeasible solution found during feasibility phase.")
                 sol = []
-                obj = "None"
+                obj = None
                 opt = True
                 solve_time = 0
             else:
                 # Timeout before finding solution
                 logger.info("Timeout occurred before finding solution during feasibility phase.")
                 sol = []
-                obj = "None"
+                obj = None
                 opt = False
         # ANY OTHER CASE FOR SAFETY
         case _:
             sol = []
-            obj = "None"
+            obj = None
             opt = False
     
     # PHASE 2: OPTIMIZATION (if requested and time permits)
@@ -319,6 +320,8 @@ if __name__ == "__main__":
     params = {'timeout': timeout,
               'n_teams': n_teams}
     verbose = 1  # Solver verbosity
+         
+    
     result_data = solve(args.solver_name, params, verbose, optimize=args.optimality, symmetry_breaking=args.sb)
     
     # Extract values from the result dictionary
@@ -342,10 +345,10 @@ if __name__ == "__main__":
         res_path = f"../../res/MIP/{args.n_teams}.json"
     save_solution(result_data, res_path)
     
-    if sol:
+    """ if sol:
         # Display the schedule
         display_schedule(sol, n_teams, n_teams-1, n_teams//2)
         # Analyze home-away balance
         analyze_home_away_balance(sol, n_teams, n_teams-1, n_teams//2)
     else:
-        print("No solution found")
+        print("No solution found") """
