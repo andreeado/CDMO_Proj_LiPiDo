@@ -17,7 +17,7 @@ else:
     MINIZINC_PATH = "C:\\Users\\xPica\\AppData\\Local\\Programs\\MiniZinc\\minizinc.exe"
     MATCH_MODEL_FILE = [
                         "C:\\Users\\xPica\\Documents\\CDMO_Proj_LiPiDo\\source\\CP\\global.mzn",
-                        "C:\\Users\\xPica\\Documents\\CDMO_Proj_LiPiDo\\source\\CP\\count.mzn",
+                        "C:\\Users\\xPica\\Documents\\CDMO_Proj_LiPiDo\\source\\CP\\count_.mzn",
                         #"C:\\Users\\xPica\\Documents\\CDMO_Proj_LiPiDo\\source\\CP\\naive_noIC.mzn",
                         #"C:\\Users\\xPica\\Documents\\CDMO_Proj_LiPiDo\\source\\CP\\globale_noIC.mzn"
                         ]
