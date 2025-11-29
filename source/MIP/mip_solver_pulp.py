@@ -16,9 +16,6 @@ def solve(solver_name, params, verbose, optimize=False, symmetry_breaking=False)
         schedule= generate_circle_schedule(data['n_teams'])
         results = set_constraints_circle(prob, schedule, data, symmetry_breaking=symmetry_breaking)
         match solver_name:
-            case 'cbc':
-                solver=PULP_CBC_CMD(msg=verbose, timeLimit=params['timeout'], threads=1, 
-                                        presolve=True, cuts=False)
             case 'gurobi':
                 solver=GUROBI(msg=verbose, timeLimit=params['timeout'], threads=1)
             case 'HiGHS':
@@ -80,8 +77,6 @@ def solve(solver_name, params, verbose, optimize=False, symmetry_breaking=False)
                 
                 # Configure solver with remaining time
                 match solver_name:
-                    case 'cbc':
-                        opt_solver = PULP_CBC_CMD(msg=verbose, timeLimit=remaining_time, presolve=False, cuts=False, threads=1)
                     case 'gurobi':
                         opt_solver = GUROBI(msg=verbose, timeLimit=remaining_time, threads=1)
                     case 'HiGHS':
@@ -296,7 +291,7 @@ if __name__ == "__main__":
     parser.add_argument("n_teams", type=int, help="Number of teams (must be even)")
 
     parser.add_argument("--solver_name", type=str, default="gurobi",
-                        choices=["cbc", "gurobi", "HiGHS"],
+                        choices=["gurobi", "HiGHS"],
                         help="Solver name (default: gurobi)")
     
     parser.add_argument("--time_limit", type=int, default=300,
