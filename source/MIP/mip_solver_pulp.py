@@ -19,7 +19,7 @@ def solve(solver_name, params, verbose, optimize=False, symmetry_breaking=False)
             case 'gurobi':
                 solver=GUROBI(msg=verbose, timeLimit=params['timeout'], threads=1)
             case 'HiGHS':
-                solver=HiGHS(msg=verbose, timeLimit=math.ceil(params['timeout']), threads=1, cuts='off')
+                solver=HiGHS(msg=verbose, timeLimit=math.ceil(params['timeout']), threads=1)
             case _:
                 raise KeyError('Unsupported solver')
         prob.solve(solver)

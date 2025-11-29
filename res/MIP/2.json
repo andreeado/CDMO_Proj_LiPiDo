@@ -2,7 +2,7 @@
   "gurobi_f": {
     "time": 0,
     "optimal": true,
-    "obj": "None",
+    "obj": null,
     "sol": [
       [
         [
@@ -25,6 +25,19 @@
       ]
     ]
   },
+  "gurobi_f_sb": {
+    "time": 0,
+    "optimal": true,
+    "obj": null,
+    "sol": [
+      [
+        [
+          1,
+          2
+        ]
+      ]
+    ]
+  },
   "gurobi_opt_sb": {
     "time": 0,
     "optimal": true,
@@ -38,10 +51,49 @@
       ]
     ]
   },
-  "gurobi_f_sb": {
+  "HiGHS_f": {
     "time": 0,
     "optimal": true,
-    "obj": "None",
+    "obj": null,
+    "sol": [
+      [
+        [
+          1,
+          2
+        ]
+      ]
+    ]
+  },
+  "HiGHS_opt": {
+    "time": 0,
+    "optimal": true,
+    "obj": 1,
+    "sol": [
+      [
+        [
+          1,
+          2
+        ]
+      ]
+    ]
+  },
+  "HiGHS_f_sb": {
+    "time": 0,
+    "optimal": true,
+    "obj": null,
+    "sol": [
+      [
+        [
+          1,
+          2
+        ]
+      ]
+    ]
+  },
+  "HiGHS_opt_sb": {
+    "time": 0,
+    "optimal": true,
+    "obj": 1,
     "sol": [
       [
         [

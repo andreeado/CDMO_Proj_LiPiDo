@@ -1,14 +1,50 @@
 {
-  "gurobi_f_sb": {
+  "gurobi_f": {
     "time": 0,
     "optimal": true,
-    "obj": "None",
+    "obj": null,
     "sol": []
   },
   "gurobi_opt": {
     "time": 0,
     "optimal": true,
-    "obj": "None",
+    "obj": null,
+    "sol": []
+  },
+  "gurobi_f_sb": {
+    "time": 0,
+    "optimal": true,
+    "obj": null,
+    "sol": []
+  },
+  "gurobi_opt_sb": {
+    "time": 0,
+    "optimal": true,
+    "obj": null,
+    "sol": []
+  },
+  "HiGHS_f": {
+    "time": 0,
+    "optimal": true,
+    "obj": null,
+    "sol": []
+  },
+  "HiGHS_opt": {
+    "time": 0,
+    "optimal": true,
+    "obj": null,
+    "sol": []
+  },
+  "HiGHS_f_sb": {
+    "time": 0,
+    "optimal": true,
+    "obj": null,
+    "sol": []
+  },
+  "HiGHS_opt_sb": {
+    "time": 0,
+    "optimal": true,
+    "obj": null,
     "sol": []
   }
 }
