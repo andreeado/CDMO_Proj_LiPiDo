@@ -24,13 +24,14 @@ else:
 
     SWAP_MODEL_FILE  = "C:\\Users\\xPica\\Documents\\CDMO_Proj_LiPiDo\\source\\CP\\OPT.mzn"
 
-TIME_LIMIT_MS = 300000  # 5 min
+TIME_LIMIT_S = 300  # 5 min
+TIME_LIMIT_MS = 300000  # 5 min in ms
 
 
 # ---------------------------------------------------------
 #  Run a MiniZinc model and extract: array solution, time, objective
 # ---------------------------------------------------------
-def run_minizinc(model_file, n, solver, seed, time_limit=TIME_LIMIT_MS, swap=True):
+def run_minizinc(model_file, n, solver, seed, time_limit, swap):
 
     cmd = [
         MINIZINC_PATH,
@@ -177,9 +178,12 @@ def pretty_print(schedule, objective):
 def main():
     parser = argparse.ArgumentParser(description="Run two MiniZinc models and combine results.")
     parser.add_argument("n", type=int, help="Number of teams")
+    parser.add_argument("--time_limit", type=int, default=TIME_LIMIT_S, help="Time limit in seconds")
     parser.add_argument("solver", type=str, nargs="?", default="gecode")
     parser.add_argument("--seed", type=int, default=55)
     parser.add_argument("--optimality", action="store_true", default=False, help="Optimize objective function")
+
+    TIME_LIMIT_MS = parser.parse_args().time_limit*1000
 
     args = parser.parse_args()
     
@@ -199,7 +203,7 @@ def main():
     }
 
     if args.optimality:
-        swap_result = run_minizinc(SWAP_MODEL_FILE,  args.n, args.solver, args.seed, swap=True)
+        swap_result = run_minizinc(SWAP_MODEL_FILE,  args.n, args.solver, args.seed, TIME_LIMIT_MS, True)
         if swap_result ["sol"] is None:
             swap_result["obj"] = None
             swap_result["optimal"] = False
@@ -209,7 +213,7 @@ def main():
 
     for model in MATCH_MODEL_FILE:
 
-        match_result = run_minizinc(model,  args.n, args.solver, args.seed, swap=False)
+        match_result = run_minizinc(model,  args.n, args.solver, args.seed, TIME_LIMIT_MS, False)
         model_name = os.path.splitext(os.path.basename(model))[0]
 
         if match_result["sol"] == []:
