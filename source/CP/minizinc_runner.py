@@ -240,12 +240,25 @@ def main():
             "sol": schedule,
         }
 
-        output_payload[args.solver+"_"+model_name] = final_data
+        # Build key with solver name, model name, and optimization strategy
+        strategy_suffix = "optimal" if args.optimality else "feasible"
+        key_name = f"{args.solver}_{model_name}_{strategy_suffix}"
+        output_payload[key_name] = final_data
 
-    # Save JSON nested under the solver key
+    # Load existing data to preserve other keys
+    data = {}
+    if os.path.exists(output_file):
+        with open(output_file, "r") as f:
+            try:
+                data = json.load(f)
+            except json.JSONDecodeError:
+                data = {}
+    
+    # Update only with new keys (don't overwrite existing ones with different names)
+    data.update(output_payload)
 
     with open(output_file, "w") as f:
-        json.dump(output_payload, f, indent=4)
+        json.dump(data, f, indent=4)
     print(f"Saved {output_file}")
 
 if __name__ == "__main__":
