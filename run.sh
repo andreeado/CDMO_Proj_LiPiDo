@@ -20,8 +20,8 @@ case "$APPROACH" in
       python source/CP/minizinc_runner.py $inst "$@"
     done
 
-    for inst in {2..18..2}; do
-      for solver in cbc gurobi HiGHS; do
+    for inst in {2..20..2}; do
+      for solver in gurobi HiGHS; do
         echo "Running MIP on instance $inst with solver $solver"
         python source/MIP/mip_solver_pulp.py $inst --solver_name $solver "$@"
       done

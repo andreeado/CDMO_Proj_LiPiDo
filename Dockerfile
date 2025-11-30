@@ -12,7 +12,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN pip install --no-cache-dir \
     ply==3.11 \
     wheel==0.45.1 \
-    pulp==2.9.0 \
+    pulp==3.2.2 \
     minizinc \
     z3-solver==4.15.3.0 \
     highspy==1.11.0 \
