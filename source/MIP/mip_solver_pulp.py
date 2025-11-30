@@ -14,9 +14,6 @@ def solve(solver_name, params, verbose, optimize=False, symmetry_breaking=False)
         data = create_data(params['n_teams'])
         init_time = time.time()
         schedule= generate_circle_schedule(data['n_teams'])
-        # hard code because of HGHS issues segmentation fault
-        """ if solver_name == 'HiGHS' and params.get('n_teams') == 12:
-            symmetry_breaking = True """
         results = set_constraints_circle(prob, schedule, data, symmetry_breaking=symmetry_breaking)
         match solver_name:
             case 'gurobi':
