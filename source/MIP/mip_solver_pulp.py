@@ -69,9 +69,7 @@ def solve(solver_name, params, verbose, optimize=False, symmetry_breaking=False)
     if optimize and sol:
         remaining_time = params['timeout'] - solve_time
         
-        if remaining_time > 0:
-            logger.info(f"Feasibility found in {solve_time}s. Starting optimization with {remaining_time}s remaining...")
-            
+        if remaining_time > 0:            
             # Create new optimization problem
             opt_prob = LpProblem("STS_HomeAway_Optimization", LpMinimize)
             
@@ -95,9 +93,9 @@ def solve(solver_name, params, verbose, optimize=False, symmetry_breaking=False)
                     sol = apply_swaps(sol, swap_vars, data)
                     obj = 0 if opt_prob.objective.value() is None else round(opt_prob.objective.value())
                     opt = (opt_prob.sol_status == const.LpSolutionOptimal)
-                    logger.info(f"Optimization completed. New objective: {obj}")
+                    logger.info(f"Optimization completed")
                 else:
-                    logger.info("Optimization did not improve solution, keeping feasible solution")
+                    logger.info("Optimization not completed, keeping feasible solution")
                     
             except Exception as e:
                 logger.warning(f"Optimization phase failed. Returning feasible solution.")
@@ -317,7 +315,7 @@ if __name__ == "__main__":
     timeout = args.time_limit
     params = {'timeout': timeout,
               'n_teams': n_teams}
-    verbose = 1  # Solver verbosity
+    verbose = 0  # Solver verbosity
          
     
     result_data = solve(args.solver_name, params, verbose, optimize=args.optimality, symmetry_breaking=args.sb)
@@ -342,11 +340,3 @@ if __name__ == "__main__":
         # local
         res_path = f"../../res/MIP/{args.n_teams}.json"
     save_solution(result_data, res_path)
-    
-    """ if sol:
-        # Display the schedule
-        display_schedule(sol, n_teams, n_teams-1, n_teams//2)
-        # Analyze home-away balance
-        analyze_home_away_balance(sol, n_teams, n_teams-1, n_teams//2)
-    else:
-        print("No solution found") """
