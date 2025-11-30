@@ -275,6 +275,9 @@ def set_optimization(problem, feasible_schedule, data, symmetry_breaking=False):
         away_count = lpSum(away_games) if away_games else 0
         problem += home_count - away_count == balance_pos[t] - balance_neg[t]
         
+        """ # balance_pos xor balance_neg must be 0
+        problem += balance_pos[t] * balance_neg[t] == 0 """
+
         # Link to max imbalance
         problem += balance_pos[t] + balance_neg[t] <= max_imbalance
 
