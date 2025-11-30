@@ -50,7 +50,7 @@ docker-compose run solve-cp <n_teams>
 To give all the parameters to the solver:
 
 ```bash
-docker-compose run solve-cp <n_teams> [solver] --optimality --seed <seed>
+docker-compose run solve-cp <n_teams> [solver] --time_limit <time_limit> --optimality --seed <seed>
 ```
 
 Default: `time_limit=300`, `optimality=False`, `solver="gecode"`, `seed=55`.
