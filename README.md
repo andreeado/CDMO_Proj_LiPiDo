@@ -50,10 +50,10 @@ docker-compose run solve-cp <n_teams>
 To give all the parameters to the solver:
 
 ```bash
-docker-compose run solve-cp <n_teams> [solver] --seed <seed> --no-opt
+docker-compose run solve-cp <n_teams> [solver] --seed <seed> --optimality
 ```
 
-Default: `solver="gecode"`, `seed=55`,  `no-opt=False`.
+Default: `solver="gecode"`, `seed=55`,  `optimality=False`.
 
 #### Run SAT on a specific instance:
 
