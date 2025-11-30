@@ -18,6 +18,7 @@ COPY --from=minizinc /usr/local/lib/ /usr/local/lib/
 ENV PATH="/usr/local/bin:${PATH}"
 COPY source/ /app/source/
 COPY run.sh /app/
+RUN sed -i 's/\r$//' /app/run.sh
 RUN chmod +x /app/run.sh
 ENV PYTHONPATH="/app"
 
