@@ -15,14 +15,14 @@ def solve(solver_name, params, verbose, optimize=False, symmetry_breaking=False)
         init_time = time.time()
         schedule= generate_circle_schedule(data['n_teams'])
         # hard code because of HGHS issues segmentation fault
-        if solver_name == 'HiGHS' and params.get('n_teams') == 12:
-            symmetry_breaking = True
+        """ if solver_name == 'HiGHS' and params.get('n_teams') == 12:
+            symmetry_breaking = True """
         results = set_constraints_circle(prob, schedule, data, symmetry_breaking=symmetry_breaking)
         match solver_name:
             case 'gurobi':
                 solver=GUROBI(msg=verbose, timeLimit=params['timeout'], threads=1)
             case 'HiGHS':
-                if params.get('n_teams') == 18:
+                if params.get('n_teams') in [12,18]:
                     solver=HiGHS(msg=verbose, timeLimit=math.ceil(params['timeout']), threads=1, mip_detect_symmetry=False)
                 else:
                     solver=HiGHS(msg=verbose, timeLimit=math.ceil(params['timeout']), threads=1)
