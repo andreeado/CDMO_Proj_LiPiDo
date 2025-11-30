@@ -3,21 +3,13 @@ FROM gurobi/python:latest
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    wget \
-    unzip \
-    build-essential \
-    && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && rm -rf /var/lib/apt/lists/*
 
 RUN pip install --no-cache-dir \
-    ply==3.11 \
-    wheel==0.45.1 \
     pulp==3.2.2 \
     minizinc \
     z3-solver==4.15.3.0 \
-    highspy==1.11.0 \
-    setuptools==78.1.1
-
+    highspy==1.11.0 
 
 COPY --from=minizinc /usr/local/bin/ /usr/local/bin/
 COPY --from=minizinc /usr/local/share/minizinc /usr/local/share/minizinc
