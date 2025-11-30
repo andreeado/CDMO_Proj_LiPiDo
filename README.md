@@ -50,10 +50,10 @@ docker-compose run solve-cp <n_teams>
 To give all the parameters to the solver:
 
 ```bash
-docker-compose run solve-cp <n_teams> [solver] --seed <seed> --optimality
+docker-compose run solve-cp <n_teams> [solver] --optimality --seed <seed>
 ```
 
-Default: `solver="gecode"`, `seed=55`,  `optimality=False`.
+Default: `solver="gecode"`, `seed=55`,  `no-opt=False`.
 
 #### Run SAT on a specific instance:
 
@@ -72,8 +72,9 @@ Default: `time_limit=300`, `optimality=False`, `seed=19`, `verbose=False`
 ### 3. Run All Approaches on All Instances
 
 ```bash
-docker-compose run solve-all
+docker-compose run solve-all --time_limit <time_limit> --optimality
 ```
+Default: `time_limit=300`, `optimality=False`
 
 ## Output
 
