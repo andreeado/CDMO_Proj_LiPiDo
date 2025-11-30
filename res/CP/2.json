@@ -1,6 +1,32 @@
 {
-    "gecode_globale": {
-        "time": 6,
+    "gecode_global_feasible": {
+        "time": 0,
+        "optimal": true,
+        "obj": null,
+        "sol": [
+            [
+                [
+                    1,
+                    2
+                ]
+            ]
+        ]
+    },
+    "gecode_count__feasible": {
+        "time": 0,
+        "optimal": true,
+        "obj": null,
+        "sol": [
+            [
+                [
+                    1,
+                    2
+                ]
+            ]
+        ]
+    },
+    "gecode_global_optimal": {
+        "time": 0,
         "optimal": false,
         "obj": null,
         "sol": [
@@ -12,8 +38,8 @@
             ]
         ]
     },
-    "gecode_naive": {
-        "time": 5,
+    "gecode_count__optimal": {
+        "time": 0,
         "optimal": false,
         "obj": null,
         "sol": [

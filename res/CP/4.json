@@ -1,11 +1,23 @@
 {
-    "gecode_globale": {
+    "gecode_global_feasible": {
         "time": 0,
         "optimal": true,
         "obj": null,
         "sol": []
     },
-    "gecode_naive": {
+    "gecode_count__feasible": {
+        "time": 0,
+        "optimal": true,
+        "obj": null,
+        "sol": []
+    },
+    "gecode_global_optimal": {
+        "time": 0,
+        "optimal": true,
+        "obj": null,
+        "sol": []
+    },
+    "gecode_count__optimal": {
         "time": 0,
         "optimal": true,
         "obj": null,
