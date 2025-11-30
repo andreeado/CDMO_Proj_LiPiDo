@@ -11,7 +11,7 @@ import numpy as np
 if os.path.exists("/app/res"):
     MINIZINC_PATH = "minizinc"
     MATCH_MODEL_FILE = ["/app/source/CP/global.mzn",
-                        "/app/source/CP/count.mzn"]
+                        "/app/source/CP/count_.mzn"]
     SWAP_MODEL_FILE = "/app/source/CP/OPT.mzn"
 else:
     MINIZINC_PATH = "C:\\Users\\xPica\\AppData\\Local\\Programs\\MiniZinc\\minizinc.exe"

@@ -1,1 +1,0 @@
-C:\\Users\\xPica\\AppData\\Local\\Programs\\MiniZinc\\minizinc.exe C:\\Users\\xPica\\Documents\\CDMO_Proj_LiPiDo\\source\\CP\\glob.mzn -D n=20 --solver gecode --time-limit 300000 --random-seed 55 --statistics
