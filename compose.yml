@@ -31,4 +31,4 @@ services:
     volumes:
       - ./res:/app/res
       - ./gurobi.lic:/opt/gurobi/gurobi.lic:ro
-    command: ["./run.sh", "all"]
+    entrypoint: ["./run.sh", "all"]
