@@ -53,7 +53,7 @@ To give all the parameters to the solver:
 docker-compose run solve-cp <n_teams> [solver] --optimality --seed <seed>
 ```
 
-Default: `solver="gecode"`, `seed=55`,  `no-opt=False`.
+Default: `time_limit=300`, `optimality=False`, `solver="gecode"`, `seed=55`.
 
 #### Run SAT on a specific instance:
 
