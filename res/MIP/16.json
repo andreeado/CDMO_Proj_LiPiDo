@@ -503,7 +503,7 @@
     ]
   },
   "gurobi_opt": {
-    "time": 36,
+    "time": 35,
     "optimal": true,
     "obj": 1,
     "sol": [
@@ -1006,7 +1006,7 @@
     ]
   },
   "gurobi_f_sb": {
-    "time": 53,
+    "time": 49,
     "optimal": true,
     "obj": null,
     "sol": [
@@ -1509,7 +1509,7 @@
     ]
   },
   "gurobi_opt_sb": {
-    "time": 54,
+    "time": 51,
     "optimal": true,
     "obj": 1,
     "sol": [
@@ -2012,7 +2012,7 @@
     ]
   },
   "HiGHS_f": {
-    "time": 67,
+    "time": 58,
     "optimal": true,
     "obj": null,
     "sol": [
@@ -2515,7 +2515,7 @@
     ]
   },
   "HiGHS_opt": {
-    "time": 71,
+    "time": 59,
     "optimal": true,
     "obj": 1,
     "sol": [
@@ -3018,7 +3018,7 @@
     ]
   },
   "HiGHS_f_sb": {
-    "time": 13,
+    "time": 11,
     "optimal": true,
     "obj": null,
     "sol": [
@@ -3521,7 +3521,7 @@
     ]
   },
   "HiGHS_opt_sb": {
-    "time": 13,
+    "time": 11,
     "optimal": true,
     "obj": 1,
     "sol": [
